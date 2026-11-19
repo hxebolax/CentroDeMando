@@ -103,3 +103,15 @@ def tocar_tono(numero: int, duracion_ms: int = 70) -> None:
 			log.debug("No se pudo tocar el tono", exc_info=True)
 
 	threading.Thread(target=sonar, name="tono", daemon=True).start()
+
+
+NOMBRES_ANTIGUOS = ("Gestor de Escritorios Virtuales",)
+
+
+def migrar_inicio_automatico(nombre: str) -> None:
+	"""Si el inicio automático se activó con un nombre antiguo del programa, lo pasa al actual."""
+	for antiguo in NOMBRES_ANTIGUOS:
+		if antiguo != nombre and inicio_automatico_activo(antiguo):
+			log.info("Inicio automático: se cambia la entrada «%s» por «%s».", antiguo, nombre)
+			if establecer_inicio_automatico(nombre, True):
+				establecer_inicio_automatico(antiguo, False)

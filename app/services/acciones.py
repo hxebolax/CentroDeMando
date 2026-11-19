@@ -28,6 +28,7 @@ CATEGORIA_CAMBIAR = "Cambiar de escritorio"
 CATEGORIA_GESTIONAR = "Gestionar escritorios"
 CATEGORIA_VENTANAS = "Ventanas"
 CATEGORIA_INFORMACION = "Información y aplicación"
+CATEGORIA_PORTAPAPELES = "Portapapeles y emoticonos"
 
 # Cuántos escritorios tienen acción directa «Ir al escritorio N» (Ctrl+Alt+Win+1 … 0).
 ESCRITORIOS_DIRECTOS = 10
@@ -175,6 +176,27 @@ ACCIONES: list[Accion] = [
 		"Ctrl+Alt+Win+B",
 	),
 	Accion(
+		"portapapeles_rapido",
+		"Historial del portapapeles",
+		"Abre el historial del portapapeles desde cualquier programa; Intro pega el elemento elegido donde estaba.",
+		CATEGORIA_PORTAPAPELES,
+		"Ctrl+Alt+Win+V",
+	),
+	Accion(
+		"emoticonos_rapido",
+		"Emoticonos",
+		"Abre la lista de emoticonos desde cualquier programa; Intro escribe el elegido donde estaba.",
+		CATEGORIA_PORTAPAPELES,
+		"Ctrl+Alt+Win+E",
+	),
+	Accion(
+		"pausar_portapapeles",
+		"Detener o reanudar la captura del portapapeles",
+		"Mientras está detenida, lo que se copia no se guarda en el historial.",
+		CATEGORIA_PORTAPAPELES,
+		"",
+	),
+	Accion(
 		"anunciar_actual",
 		"Decir el escritorio actual",
 		"Anuncia el número y el nombre del escritorio actual y cuántos hay.",
@@ -186,12 +208,12 @@ ACCIONES: list[Accion] = [
 		"Decir las ventanas del escritorio actual",
 		"Anuncia cuántas ventanas hay en el escritorio actual y sus títulos.",
 		CATEGORIA_INFORMACION,
-		"Ctrl+Alt+Win+V",
+		"Ctrl+Alt+Win+W",
 	),
 	Accion(
 		"mostrar_gestor",
-		"Mostrar u ocultar el gestor",
-		"Muestra la ventana del gestor; si ya está delante, la oculta en la bandeja.",
+		"Mostrar u ocultar Centro de Mando",
+		"Muestra la ventana principal; si ya está delante, la oculta en la bandeja.",
 		CATEGORIA_INFORMACION,
 		"Ctrl+Alt+Win+G",
 	),

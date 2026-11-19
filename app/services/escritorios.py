@@ -390,7 +390,7 @@ class MotorEscritorios:
 			log.warning("No se pudo mover la ventana %s al escritorio %s", hwnd, numero, exc_info=True)
 			raise ErrorEscritorios(
 				_(
-					"Windows no deja mover esta ventana. Si es de un programa ejecutado como administrador, ejecute también este gestor como administrador."
+					"Windows no deja mover esta ventana. Si es de un programa ejecutado como administrador, ejecute también Centro de Mando como administrador."
 				)
 			) from error
 

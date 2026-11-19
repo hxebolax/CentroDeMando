@@ -105,3 +105,21 @@ def ruta_binarios() -> Path:
 def ruta_traducciones() -> Path:
 	"""Catálogos gettext: ``data/locales/<idioma>/LC_MESSAGES``."""
 	return subcarpeta("locales")
+
+
+def ruta_base_datos() -> Path:
+	"""Bases de datos SQLite (historial del portapapeles). NUNCA se distribuye."""
+	return subcarpeta("db")
+
+
+def ruta_emojis() -> Path:
+	"""Datos de emoticonos en español (``emojis_es.json``, generado con tools/generar_emojis.py).
+
+	Son un recurso DEL PROGRAMA, no del usuario: se buscan primero en la carpeta
+	data activa y, si no están (data redirigida con APP_DATA_DIR), junto al
+	programa.
+	"""
+	propia = ruta_datos() / "emojis"
+	if (propia / "emojis_es.json").is_file():
+		return propia
+	return ruta_base() / "data" / "emojis"

@@ -1,6 +1,6 @@
 """Compilación con cx_Freeze: ``python setup_cx.py build`` (``--debug`` = con consola).
 
-Genera ``build/EscritoriosVirtuales`` con:
+Genera ``build/CentroDeMando`` con:
 
 - El ejecutable sin consola (``base="gui"``).
 - Los runtimes de Visual C++ (``include_msvcr``), para que arranque en un
@@ -22,13 +22,13 @@ RAIZ = Path(__file__).resolve().parent
 
 # ── CONFIGURACIÓN DEL PROYECTO ───────────────────────────────────────────────
 
-NOMBRE_APP = "EscritoriosVirtuales"
-EJECUTABLE = "EscritoriosVirtuales.exe"
+NOMBRE_APP = "CentroDeMando"
+EJECUTABLE = "CentroDeMando.exe"
 DESCRIPCION = "Aplicación accesible para Windows"
 ICONO = RAIZ / "data" / "icons" / "app.ico"
 
 # Subcarpetas de data/ que SÍ se distribuyen (lista blanca).
-DATA_DISTRIBUIBLE = ["bin", "sounds", "locales", "docs", "icons", "plugins"]
+DATA_DISTRIBUIBLE = ["bin", "sounds", "locales", "docs", "icons", "plugins", "emojis"]
 # Subcarpetas que JAMÁS pueden distribuirse: si alguien las añade arriba, se para.
 DATA_PROHIBIDO = {"config", "logs", "db", "cache", "temp", "sessions", "backups", "downloads"}
 # Archivos que nunca se copian aunque estén en una carpeta distribuible.

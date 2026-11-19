@@ -38,6 +38,7 @@ from app.core.version import NOMBRE_APLICACION
 from app.services import ventanas_win32 as w32
 from app.services.escritorios import EstadoEscritorios, InfoVentana
 from app.ui import listas
+from app.ui.listas import actualizar_lista
 from app.ui.accesibilidad.dialogos import confirmar, pedir_texto
 from app.ui.accesibilidad.lista import ListaAccesible
 from app.ui.bandeja import IconoBandeja
@@ -95,8 +96,8 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("fondo", "&Fondo de pantalla...", "Elige una imagen de fondo para el escritorio seleccionado.", wx.ITEM_NORMAL),
 			("fondo_todos", "Fondo para &todos...", "Elige una imagen de fondo para todos los escritorios.", wx.ITEM_NORMAL),
 			None,
-			("ocultar", "Ocultar en la b&andeja", "Oculta la ventana; el gestor sigue en la bandeja (también con Escape).", wx.ITEM_NORMAL),
-			("salir", "&Salir\tCtrl+Q", "Cierra el gestor por completo; las teclas globales dejan de funcionar.", wx.ITEM_NORMAL),
+			("ocultar", "Ocultar en la b&andeja", "Oculta la ventana; Centro de Mando sigue en la bandeja (también con Escape).", wx.ITEM_NORMAL),
+			("salir", "&Salir\tCtrl+Q", "Cierra Centro de Mando por completo; las teclas globales dejan de funcionar.", wx.ITEM_NORMAL),
 		],
 	),
 	(
@@ -150,8 +151,50 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 		],
 	),
 	(
+		"&Portapapeles",
+		[
+			(
+				"pegar_elemento",
+				"&Pegar en la ventana anterior",
+				"Pega el elemento seleccionado en la ventana que usaba antes de Centro de Mando (también con Intro).",
+				wx.ITEM_NORMAL,
+			),
+			("copiar_elemento", "&Copiar al portapapeles", "Copia el elemento seleccionado sin pegarlo (también con Mayúsculas+Intro).", wx.ITEM_NORMAL),
+			("favorito_elemento", "Añadir o quitar de &favoritos", "Marca o desmarca el elemento como favorito (también con F4).", wx.ITEM_NORMAL),
+			("renombrar_elemento", "Cambiar el &nombre del elemento...", "Pone un nombre al elemento para reconocerlo (también con F2 en la lista).", wx.ITEM_NORMAL),
+			("eliminar_elemento", "&Eliminar el elemento", "Borra el elemento del historial (también con Suprimir).", wx.ITEM_NORMAL),
+			None,
+			("vaciar_historial", "&Vaciar el historial...", "Borra todo el historial salvo los favoritos.", wx.ITEM_NORMAL),
+			("exportar_historial", "E&xportar los textos...", "Guarda todos los textos del historial en un archivo de texto.", wx.ITEM_NORMAL),
+			("pausar_captura", "&Detener la captura", "Mientras está marcada, lo que se copia no se guarda en el historial.", wx.ITEM_CHECK),
+			None,
+			("portapapeles_rapido", "Abrir la lista &rápida", "Abre la ventana rápida del historial, la misma de la tecla global.", wx.ITEM_NORMAL),
+		],
+	),
+	(
+		"E&moticonos",
+		[
+			(
+				"insertar_emoticono",
+				"&Insertar en la ventana anterior",
+				"Escribe el emoticono seleccionado en la ventana que usaba antes de Centro de Mando (también con Intro).",
+				wx.ITEM_NORMAL,
+			),
+			("copiar_emoticono", "&Copiar al portapapeles", "Copia el emoticono seleccionado (también con Mayúsculas+Intro).", wx.ITEM_NORMAL),
+			("acumular_emoticono", "&Añadir al texto para insertar", "Va juntando emoticonos para insertarlos de una vez (también con Control+Intro).", wx.ITEM_NORMAL),
+			("favorito_emoticono", "Añadir o quitar de &favoritos", "Marca o desmarca el emoticono como favorito (también con F4).", wx.ITEM_NORMAL),
+			None,
+			("vaciar_recientes", "&Vaciar los usados recientemente", "Borra la lista de emoticonos usados recientemente.", wx.ITEM_NORMAL),
+			("emoticonos_rapido", "Abrir la lista &rápida", "Abre la ventana rápida de emoticonos, la misma de la tecla global.", wx.ITEM_NORMAL),
+		],
+	),
+	(
 		"&Ver",
 		[
+			("area_escritorios", "Área de e&scritorios\tAlt+1", "Muestra el área de escritorios y ventanas.", wx.ITEM_NORMAL),
+			("area_portapapeles", "Área de &portapapeles\tAlt+2", "Muestra el historial del portapapeles.", wx.ITEM_NORMAL),
+			("area_emoticonos", "Área de e&moticonos\tAlt+3", "Muestra los emoticonos.", wx.ITEM_NORMAL),
+			None,
 			(
 				"ver_todas",
 				"Ventanas de &todos los escritorios",
@@ -179,7 +222,7 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 				"Llevar automáticamente las ventanas de ciertos programas a un escritorio.",
 				wx.ITEM_NORMAL,
 			),
-			("opciones", "&Opciones...\tCtrl+,", "Opciones del gestor.", wx.ITEM_NORMAL),
+			("opciones", "&Opciones...\tCtrl+,", "Opciones de Centro de Mando.", wx.ITEM_NORMAL),
 			None,
 			("carpeta_datos", "Abrir la carpeta de &datos", "Abre en el Explorador la carpeta data del programa.", wx.ITEM_NORMAL),
 			("carpeta_registros", "Abrir la carpeta de re&gistros", "Abre en el Explorador la carpeta de registros.", wx.ITEM_NORMAL),
@@ -210,51 +253,8 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 ]
 
 
-def actualizar_lista(lista: wx.ListCtrl, filas: Sequence[tuple[Any, Sequence[str]]], claves: list[Any]) -> None:
-	"""Pone ``filas`` (clave, celdas) en la lista tocando solo lo que cambia.
-
-	``claves`` (la lista paralela de claves de la lista) se actualiza en su
-	sitio. La selección y el foco se conservan por clave: si el elemento
-	seleccionado sigue existiendo, sigue seleccionado aunque cambie de posición.
-	"""
-	enfocado = lista.GetFocusedItem()
-	clave_enfocada = claves[enfocado] if 0 <= enfocado < len(claves) else None
-	nuevas = [clave for clave, _celdas in filas]
-	if isinstance(lista, ListaAccesible):
-		# La lista accesible guarda el texto íntegro de cada celda para leerlo por columnas.
-		if nuevas != claves:
-			lista.reemplazar_filas([list(celdas) for _clave, celdas in filas], conservar_foco=False)
-			claves[:] = nuevas
-			if filas:
-				destino = nuevas.index(clave_enfocada) if clave_enfocada in nuevas else min(max(enfocado, 0), len(filas) - 1)
-				lista.enfocar_fila(destino, anunciar=False)
-		else:
-			for indice, (_clave, celdas) in enumerate(filas):
-				lista.actualizar_fila(indice, list(celdas))
-		return
-	if nuevas != claves:
-		lista.DeleteAllItems()
-		for indice, (_clave, celdas) in enumerate(filas):
-			lista.InsertItem(indice, celdas[0])
-			for columna, texto in enumerate(celdas[1:], 1):
-				lista.SetItem(indice, columna, texto)
-		claves[:] = nuevas
-		if filas:
-			destino = nuevas.index(clave_enfocada) if clave_enfocada in nuevas else min(max(enfocado, 0), len(filas) - 1)
-			lista.Focus(destino)
-			lista.Select(destino)
-		return
-	for indice, (_clave, celdas) in enumerate(filas):
-		for columna, texto in enumerate(celdas):
-			if lista.GetItemText(indice, columna) != texto:
-				lista.SetItem(indice, columna, texto)
-	if filas and lista.GetFocusedItem() < 0:
-		lista.Focus(0)
-		lista.Select(0)
-
-
 class VentanaPrincipal(wx.Frame):
-	"""Gestor de escritorios: lista de escritorios, sus ventanas, menús y bandeja."""
+	"""Ventana principal de Centro de Mando: áreas en pestañas, menús y bandeja."""
 
 	def __init__(
 		self, configuracion: Configuracion, instancia: InstanciaUnica | None = None, controlador: Controlador | None = None
@@ -321,7 +321,9 @@ class VentanaPrincipal(wx.Frame):
 
 	def _crear_contenido(self) -> None:
 		"""Etiqueta SIEMPRE creada justo antes de su lista: de ella toma el nombre el lector."""
-		self.panel = wx.Panel(self)
+		# Tres áreas en pestañas (Control+Tabulador o Alt+1, 2 y 3 para cambiar).
+		self.libro = wx.Notebook(self)
+		self.panel = wx.Panel(self.libro)
 		etiqueta = wx.StaticText(self.panel, label=_("&Lista de escritorios:"))
 		self.lista = listas.crear_lista(
 			self.panel,
@@ -362,6 +364,21 @@ class VentanaPrincipal(wx.Frame):
 		sizer.Add(etiqueta_ventanas, 0, wx.LEFT | wx.RIGHT, 8)
 		sizer.Add(self.lista_ventanas, 1, wx.EXPAND | wx.ALL, 8)
 		self.panel.SetSizer(sizer)
+		self.libro.AddPage(self.panel, _("Escritorios"))
+
+		from app.ui.area_emoticonos import AreaEmoticonos
+		from app.ui.area_portapapeles import AreaPortapapeles
+
+		self.area_portapapeles = AreaPortapapeles(self.libro, self.controlador, lambda identificador: self.controlador.pegar_elemento(identificador, 0))
+		self.libro.AddPage(self.area_portapapeles, _("Portapapeles"))
+		self.area_emoticonos = AreaEmoticonos(self.libro, self.controlador, lambda texto: self.controlador.insertar_texto(texto, 0))
+		self.libro.AddPage(self.area_emoticonos, _("Emoticonos"))
+		self.areas = [self.panel, self.area_portapapeles, self.area_emoticonos]
+		marco = wx.BoxSizer(wx.VERTICAL)
+		marco.Add(self.libro, 1, wx.EXPAND)
+		self.SetSizer(marco)
+		self.libro.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self._al_cambiar_area)
+		self.controlador.suscribir_portapapeles(self._al_cambiar_historial)
 
 	def _aplicar_icono(self) -> None:
 		ruta = paths.ruta_iconos() / "app.ico"
@@ -579,6 +596,111 @@ class VentanaPrincipal(wx.Frame):
 	def _preparar_modal(self) -> None:
 		wx.CallLater(120, self._traer_dialogo_al_frente)
 
+	# ── Áreas y ventanas rápidas ─────────────────────────────────────────────
+
+	def area_actual(self) -> wx.Window:
+		return self.areas[max(self.libro.GetSelection(), 0)]
+
+	def mostrar_area(self, indice: int) -> None:
+		self.libro.SetSelection(indice)
+		area = self.areas[indice]
+		if area is self.panel:
+			self._enfocar_lista()
+		else:
+			if area is self.area_portapapeles:
+				area.refrescar()
+			area.enfocar()
+
+	def _al_cambiar_area(self, evento: wx.BookCtrlEvent) -> None:
+		if evento.GetSelection() == 1:
+			self.area_portapapeles.refrescar()
+		evento.Skip()
+
+	def _al_cambiar_historial(self) -> None:
+		if self and self.IsShown() and self.area_actual() is self.area_portapapeles:
+			self.area_portapapeles.refrescar()
+
+	def abrir_ventana_rapida(self, accion: str, destino: int) -> None:
+		"""Abre la ventana rápida de portapapeles o de emoticonos para la ventana ``destino``."""
+		from app.ui.ventanas_rapidas import EmoticonosRapido, PortapapelesRapido
+
+		self._cerrar_selector()
+		clase = PortapapelesRapido if accion == "portapapeles_rapido" else EmoticonosRapido
+		self._selector = clase(self.controlador, destino)
+		self._selector.abrir()
+
+	def _al_area_escritorios(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(0)
+
+	def _al_area_portapapeles(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(1)
+
+	def _al_area_emoticonos(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(2)
+
+	def _al_pegar_elemento(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.pegar()
+
+	def _al_copiar_elemento(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.copiar()
+
+	def _al_favorito_elemento(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.alternar_favorito()
+
+	def _al_renombrar_elemento(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.renombrar()
+
+	def _al_eliminar_elemento(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.eliminar()
+
+	def _al_vaciar_historial(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.vaciar()
+
+	def _al_exportar_historial(self, _evento: wx.CommandEvent | None) -> None:
+		with wx.FileDialog(
+			self,
+			_("Exportar los textos del historial"),
+			defaultFile="portapapeles.txt",
+			wildcard=_("Texto (*.txt)|*.txt"),
+			style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+		) as dialogo:
+			if dialogo.ShowModal() != wx.ID_OK:
+				return
+			ruta = Path(dialogo.GetPath())
+		try:
+			cuantos = self.controlador.portapapeles.historial.exportar_texto(ruta)
+		except OSError:
+			log.exception("No se pudo exportar el historial a %s", ruta)
+			mostrar_error(self, _("No se pudo escribir {ruta}.").format(ruta=ruta), _("Exportar"))
+			return
+		self.controlador.hablar(_("Exportados {n} textos").format(n=cuantos), True)
+
+	def _al_pausar_captura(self, evento: wx.CommandEvent) -> None:
+		if bool(evento.IsChecked()) != self.controlador.portapapeles.pausado:
+			self.controlador.alternar_captura()
+
+	def _al_portapapeles_rapido(self, _evento: wx.CommandEvent | None) -> None:
+		self.abrir_ventana_rapida("portapapeles_rapido", 0)
+
+	def _al_insertar_emoticono(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_emoticonos.insertar()
+
+	def _al_copiar_emoticono(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_emoticonos.copiar()
+
+	def _al_acumular_emoticono(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_emoticonos.acumular()
+
+	def _al_favorito_emoticono(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_emoticonos.alternar_favorito()
+
+	def _al_vaciar_recientes(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_emoticonos.vaciar_recientes()
+		self.controlador.hablar(_("Recientes vaciados"), True)
+
+	def _al_emoticonos_rapido(self, _evento: wx.CommandEvent | None) -> None:
+		self.abrir_ventana_rapida("emoticonos_rapido", 0)
+
 	def _cerrar_selector(self) -> None:
 		if self._selector:
 			self._selector.cerrar()
@@ -733,7 +855,14 @@ class VentanaPrincipal(wx.Frame):
 		evento.Skip()
 
 	def _al_tecla_ventana(self, evento: wx.KeyEvent) -> None:
-		"""Escape oculta el gestor en la bandeja (no lo cierra)."""
+		"""Teclas de las listas de portapapeles y emoticonos; Escape oculta el gestor en la bandeja.
+
+		``EVT_CHAR_HOOK`` llega ANTES que los atajos de menú: así F2 en la lista
+		del portapapeles cambia el nombre del elemento y no el del escritorio.
+		"""
+		area = self.area_actual()
+		if hasattr(area, "manejar_tecla") and area.manejar_tecla(evento):
+			return
 		if evento.GetKeyCode() == wx.WXK_ESCAPE and not evento.HasAnyModifiers():
 			self.ocultar_en_bandeja()
 			return
@@ -846,6 +975,7 @@ class VentanaPrincipal(wx.Frame):
 			self.elementos_menu[nombre].Enable(ventana is not None)
 		self.elementos_menu["anclar_ventana"].Check(bool(ventana and ventana.anclada))
 		self.elementos_menu["anclar_aplicacion"].Check(bool(ventana and ventana.app_anclada))
+		self.elementos_menu["pausar_captura"].Check(self.controlador.portapapeles.pausado)
 		evento.Skip()
 
 	# ── Manejadores: Escritorios ─────────────────────────────────────────────

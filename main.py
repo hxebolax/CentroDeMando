@@ -188,6 +188,10 @@ def _principal(argumentos: list[str]) -> int:
 	# Hilo de escritorios y teclas globales: también en la comprobación de
 	# arranque, para que un fallo de COM o de registro de teclas se vea en ella.
 	ventana.controlador.iniciar()
+	if not comprobar:
+		from app.services import sistema
+
+		sistema.migrar_inicio_automatico(NOMBRE_APLICACION)
 
 	if comprobar:
 		# Sin mostrar nada: se cierra en cuanto arranca el bucle de eventos.

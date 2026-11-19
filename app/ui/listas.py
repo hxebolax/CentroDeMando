@@ -13,6 +13,7 @@ listas ya abiertas cambian sin reiniciar.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
 import wx
 
@@ -53,3 +54,46 @@ AYUDA_COLUMNAS = (
 	"Izquierda y Derecha recorren las columnas; Control más un número del 1 al 0 lee esa columna; "
 	"Control+Mayúsculas+Inicio o Fin, la primera o la última."
 )
+
+
+def actualizar_lista(lista: wx.ListCtrl, filas: Sequence[tuple[Any, Sequence[str]]], claves: list[Any]) -> None:
+	"""Pone ``filas`` (clave, celdas) en la lista tocando solo lo que cambia.
+
+	``claves`` (la lista paralela de claves de la lista) se actualiza en su
+	sitio. La selección y el foco se conservan por clave: si el elemento
+	seleccionado sigue existiendo, sigue seleccionado aunque cambie de posición.
+	"""
+	enfocado = lista.GetFocusedItem()
+	clave_enfocada = claves[enfocado] if 0 <= enfocado < len(claves) else None
+	nuevas = [clave for clave, _celdas in filas]
+	if isinstance(lista, ListaAccesible):
+		# La lista accesible guarda el texto íntegro de cada celda para leerlo por columnas.
+		if nuevas != claves:
+			lista.reemplazar_filas([list(celdas) for _clave, celdas in filas], conservar_foco=False)
+			claves[:] = nuevas
+			if filas:
+				destino = nuevas.index(clave_enfocada) if clave_enfocada in nuevas else min(max(enfocado, 0), len(filas) - 1)
+				lista.enfocar_fila(destino, anunciar=False)
+		else:
+			for indice, (_clave, celdas) in enumerate(filas):
+				lista.actualizar_fila(indice, list(celdas))
+		return
+	if nuevas != claves:
+		lista.DeleteAllItems()
+		for indice, (_clave, celdas) in enumerate(filas):
+			lista.InsertItem(indice, celdas[0])
+			for columna, texto in enumerate(celdas[1:], 1):
+				lista.SetItem(indice, columna, texto)
+		claves[:] = nuevas
+		if filas:
+			destino = nuevas.index(clave_enfocada) if clave_enfocada in nuevas else min(max(enfocado, 0), len(filas) - 1)
+			lista.Focus(destino)
+			lista.Select(destino)
+		return
+	for indice, (_clave, celdas) in enumerate(filas):
+		for columna, texto in enumerate(celdas):
+			if lista.GetItemText(indice, columna) != texto:
+				lista.SetItem(indice, columna, texto)
+	if filas and lista.GetFocusedItem() < 0:
+		lista.Focus(0)
+		lista.Select(0)

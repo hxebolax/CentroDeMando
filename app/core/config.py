@@ -77,6 +77,36 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"decir_cabecera": True,
 		"decir_contenido": True,
 	},
+	"portapapeles": {
+		"activo": True,
+		# Elementos que se guardan como máximo (0 = sin límite). Los favoritos no cuentan para borrar.
+		"maximo": 500,
+		"guardar_html": True,
+		"guardar_archivos": True,
+		"guardar_imagenes": True,
+		"maximo_imagen_mb": 20,
+		# No guardar lo que los gestores de contraseñas marcan como privado.
+		"ignorar_privados": True,
+		# Programas cuyas copias no se guardan, separados por comas («keepass.exe, bitwarden.exe»).
+		"programas_excluidos": "",
+		# Tras pegar desde el historial, devolver al portapapeles lo que había antes.
+		"restaurar_tras_pegar": True,
+		"retraso_restaurar_ms": 500,
+		# control_v | mayus_insert
+		"metodo_pegado": "control_v",
+		"anunciar_copias": False,
+	},
+	"emoticonos": {
+		# 0 = sin tono; 1-5 = de claro a oscuro.
+		"tono": 0,
+		# escribir (teclear el carácter, sin tocar el portapapeles) | control_v | mayus_insert
+		"metodo": "escribir",
+		# Mostrar el carácter junto al nombre en las listas (el lector lo leería dos veces).
+		"mostrar_caracter": False,
+		"maximo_recientes": 40,
+		"recientes": [],
+		"favoritos": [],
+	},
 	"ventanas": {
 		# Al mover la ventana activa a otro escritorio, ir con ella.
 		"seguir_ventana": False,

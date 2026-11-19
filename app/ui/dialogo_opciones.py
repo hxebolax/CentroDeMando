@@ -40,10 +40,15 @@ class Opcion:
 	clave: str
 	etiqueta: str
 	ayuda: str
-	tipo: str = "bool"  # bool | int | elegir | nota (texto explicativo, sin control)
+	tipo: str = "bool"  # bool | int | elegir | texto | nota (texto explicativo, sin control)
 	minimo: int = 0
 	maximo: int = 0
 	opciones: tuple[str, ...] = field(default_factory=tuple)
+	# Valores que se guardan para cada opción de «elegir» (por defecto, el mismo texto).
+	valores: tuple = field(default_factory=tuple)
+
+	def valores_elegir(self) -> tuple:
+		return self.valores or self.opciones
 
 
 PAGINAS: list[tuple[str, list[Opcion]]] = [
@@ -53,7 +58,7 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 			Opcion(
 				CLAVE_INICIO_WINDOWS,
 				"&Iniciar con Windows",
-				"Arranca el gestor al iniciar sesión en Windows. Es lo único que se guarda fuera de la carpeta del programa (en el registro de su usuario).",
+				"Arranca Centro de Mando al iniciar sesión en Windows. Es lo único que se guarda fuera de la carpeta del programa (en el registro de su usuario).",
 			),
 			Opcion(
 				"general.bandeja_al_iniciar_con_windows",
@@ -63,7 +68,7 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 			Opcion(
 				"general.iniciar_en_bandeja",
 				"Arrancar siempre oc&ulto en la bandeja",
-				"También al abrirlo a mano, el gestor arranca sin mostrar la ventana.",
+				"También al abrirlo a mano, Centro de Mando arranca sin mostrar la ventana.",
 			),
 			Opcion(
 				"general.icono_siempre",
@@ -114,7 +119,7 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 			),
 			Opcion(
 				"anuncios.anunciar_cambios_externos",
-				"Anunciar también los cambios hechos &fuera del gestor",
+				"Anunciar también los cambios hechos &fuera de Centro de Mando",
 				"También al cambiar con las teclas de Windows, la Vista de tareas u otros programas.",
 			),
 			Opcion("anuncios.decir_numero", "Decir el &número del escritorio", "Incluye el número aunque el escritorio tenga nombre."),
@@ -162,6 +167,90 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 		],
 	),
 	(
+		"Portapapeles",
+		[
+			Opcion("portapapeles.activo", "Guardar lo que se copia en el &historial", "Si se desmarca, el historial deja de crecer; lo guardado se conserva."),
+			Opcion(
+				"portapapeles.maximo",
+				"Número &máximo de elementos (0 = sin límite):",
+				"Al pasarse, se borran los más antiguos que no son favoritos. Los favoritos no se borran nunca por el límite.",
+				"int",
+				0,
+				100000,
+			),
+			Opcion("portapapeles.guardar_html", "Guardar también el &formato (HTML)", "Al pegar en un procesador de textos o en un correo se conserva el formato."),
+			Opcion("portapapeles.guardar_archivos", "Guardar las copias de a&rchivos", "Archivos y carpetas copiados en el Explorador, para pegarlos más tarde."),
+			Opcion("portapapeles.guardar_imagenes", "Guardar las &imágenes", "Imágenes copiadas (capturas de pantalla, por ejemplo)."),
+			Opcion(
+				"portapapeles.maximo_imagen_mb",
+				"Tamaño máximo de ca&da imagen en megas:",
+				"Las imágenes más grandes no se guardan.",
+				"int",
+				1,
+				500,
+			),
+			Opcion(
+				"portapapeles.ignorar_privados",
+				"No guardar el contenido marcado como pri&vado (contraseñas)",
+				"Los gestores de contraseñas marcan lo que copian para que ningún historial lo guarde. Se recomienda dejarlo marcado.",
+			),
+			Opcion(
+				"portapapeles.programas_excluidos",
+				"Programas &excluidos, separados por comas:",
+				"Lo que copien estos programas no se guarda. Por ejemplo: keepass.exe, bitwarden.exe",
+				"texto",
+			),
+			Opcion(
+				"portapapeles.restaurar_tras_pegar",
+				"Devolver al portapapeles lo que había &tras pegar",
+				"Al pegar desde el historial, lo que tenía copiado vuelve al portapapeles al terminar.",
+			),
+			Opcion(
+				"portapapeles.metodo_pegado",
+				"Forma de pe&gar:",
+				"Casi todos los programas pegan con Control+V; algunos terminales solo con Mayúsculas+Insertar.",
+				"elegir",
+				opciones=("Control+V", "Mayúsculas+Insertar"),
+				valores=("control_v", "mayus_insert"),
+			),
+			Opcion("portapapeles.anunciar_copias", "A&nunciar cada copia por voz", "Dice el principio de lo que se acaba de copiar."),
+		],
+	),
+	(
+		"Emoticonos",
+		[
+			Opcion(
+				"emoticonos.metodo",
+				"&Forma de insertar:",
+				"Escribir el carácter no toca el portapapeles y funciona en casi todos los programas; si alguno no lo acepta, elija pegar.",
+				"elegir",
+				opciones=("Escribir el carácter (recomendado)", "Pegar con Control+V", "Pegar con Mayúsculas+Insertar"),
+				valores=("escribir", "control_v", "mayus_insert"),
+			),
+			Opcion(
+				"emoticonos.tono",
+				"&Tono de piel predeterminado:",
+				"Se aplica a los emoticonos de personas y manos. También se cambia desde el área de emoticonos.",
+				"elegir",
+				opciones=("Sin tono (amarillo)", "Claro", "Claro medio", "Medio", "Oscuro medio", "Oscuro"),
+				valores=(0, 1, 2, 3, 4, 5),
+			),
+			Opcion(
+				"emoticonos.mostrar_caracter",
+				"&Mostrar el emoticono junto a su nombre en las listas",
+				"Útil para verlo en pantalla. Con lector de pantalla se oiría dos veces, porque el lector ya lee el emoticono por su nombre.",
+			),
+			Opcion(
+				"emoticonos.maximo_recientes",
+				"Número de usados &recientemente que se recuerdan:",
+				"Cuántos emoticonos guarda el grupo «Usados recientemente».",
+				"int",
+				5,
+				200,
+			),
+		],
+	),
+	(
 		"Ventanas",
 		[
 			Opcion(
@@ -172,7 +261,7 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 			Opcion(
 				"ventanas.aplicar_reglas_al_iniciar",
 				"Aplicar las &reglas también a las ventanas abiertas al iniciar",
-				"Si está desactivado, las reglas solo mueven las ventanas que se abren después de arrancar el gestor.",
+				"Si está desactivado, las reglas solo mueven las ventanas que se abren después de arrancar Centro de Mando.",
 			),
 		],
 	),
@@ -187,7 +276,7 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 			Opcion(
 				"escritorios.intervalo_sondeo_ms",
 				"Intervalo de &sondeo en milisegundos:",
-				"Cada cuánto se comprueba si se cambió de escritorio fuera del gestor. Menos es más rápido; más gasta menos.",
+				"Cada cuánto se comprueba si se cambió de escritorio fuera de Centro de Mando. Menos es más rápido; más gasta menos.",
 				"int",
 				50,
 				5000,
@@ -249,10 +338,12 @@ class DialogoOpciones(wx.Dialog):
 			etiqueta = wx.StaticText(pagina, label=_(opcion.etiqueta))
 			if opcion.tipo == "int":
 				control = wx.SpinCtrl(pagina, min=opcion.minimo, max=opcion.maximo, initial=int(valor or opcion.minimo))
+			elif opcion.tipo == "texto":
+				control = wx.TextCtrl(pagina, value=str(valor or ""), size=self.FromDIP(wx.Size(320, -1)))
 			else:
-				control = wx.Choice(pagina, choices=list(opcion.opciones))
-				texto = str(valor or "")
-				control.SetSelection(opcion.opciones.index(texto) if texto in opcion.opciones else 0)
+				control = wx.Choice(pagina, choices=[_(o) for o in opcion.opciones])
+				valores = opcion.valores_elegir()
+				control.SetSelection(valores.index(valor) if valor in valores else 0)
 			fila = wx.BoxSizer(wx.HORIZONTAL)
 			fila.Add(etiqueta, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 			fila.Add(control)
@@ -271,8 +362,10 @@ class DialogoOpciones(wx.Dialog):
 					valor = control.GetValue()
 				elif opcion.tipo == "int":
 					valor = int(control.GetValue())
+				elif opcion.tipo == "texto":
+					valor = control.GetValue().strip()
 				else:
-					valor = opcion.opciones[max(control.GetSelection(), 0)]
+					valor = opcion.valores_elegir()[max(control.GetSelection(), 0)]
 				if opcion.clave == CLAVE_INICIO_WINDOWS:
 					if bool(valor) != sistema.inicio_automatico_activo(NOMBRE_APLICACION):
 						if not sistema.establecer_inicio_automatico(NOMBRE_APLICACION, bool(valor)):

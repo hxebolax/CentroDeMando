@@ -41,8 +41,7 @@ def texto_emergente(estado: EstadoEscritorios) -> str:
 
 	Windows 11 nombra el botón de la bandeja con la descripción del ejecutable
 	seguida de este texto. Si el texto repitiera el nombre del programa, el
-	lector diría «Gestor de Escritorios Virtuales Gestor de Escritorios
-	Virtuales: Escritorio 4».
+	lector diría «Centro de Mando Centro de Mando: Escritorio 4».
 	"""
 	escritorio = estado.escritorio_actual()
 	if escritorio is None:
@@ -102,7 +101,7 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 	def CreatePopupMenu(self) -> wx.Menu:  # noqa: N802 - nombre impuesto por wx
 		"""Menú contextual del icono, con los escritorios de este momento."""
 		menu = wx.Menu()
-		self._agregar(menu, _("&Mostrar el gestor"), self._restaurar)
+		self._agregar(menu, _("&Mostrar Centro de Mando"), self._restaurar)
 		menu.AppendSeparator()
 
 		estado = self._obtener_estado()

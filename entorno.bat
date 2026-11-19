@@ -11,7 +11,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 cd /d "%~dp0"
 
-set "NOMBRE_APP=EscritoriosVirtuales"
+set "NOMBRE_APP=CentroDeMando"
 rem Versión de Python del proyecto (por ejemplo 3.13). Vacía = la predeterminada del
 rem lanzador py (la marcada con * en "py -0p"). No se usa "py -3": elegiría la más
 rem reciente instalada, quizá una preliminar sin ruedas de wxPython.

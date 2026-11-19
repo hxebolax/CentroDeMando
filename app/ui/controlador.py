@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import builtins
 import logging
+import os
+import threading
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -25,6 +27,8 @@ from app.services import acciones as catalogo
 from app.services import sistema
 from app.services.escritorios import EstadoEscritorios, InfoEscritorio, InfoVentana
 from app.services.reglas import Regla, cargar_reglas
+from app.services import ventanas_win32 as w32
+from app.services.portapapeles import Elemento, PreferenciasPortapapeles, ServicioPortapapeles
 from app.services.servicio import ORIGEN_EXTERNO, Preferencias, ServicioEscritorios
 from app.services.teclas import GestorTeclasGlobales, ResultadoRegistro
 
@@ -83,9 +87,18 @@ def describir_ventanas(ventanas: list[InfoVentana], maximo: int = 10) -> str:
 class Controlador:
 	"""Coordina servicio, teclas e interfaz. Se crea en el hilo principal."""
 
-	def __init__(self, configuracion: Configuracion, servicio: ServicioEscritorios | None = None, con_teclas: bool = True) -> None:
+	def __init__(
+		self,
+		configuracion: Configuracion,
+		servicio: ServicioEscritorios | None = None,
+		con_teclas: bool = True,
+		portapapeles: ServicioPortapapeles | None = None,
+	) -> None:
 		self.config = configuracion
 		self.servicio = servicio or ServicioEscritorios(self.preferencias)
+		self.portapapeles = portapapeles or ServicioPortapapeles(self.preferencias_portapapeles)
+		self._oyentes_portapapeles: list[Callable[[], None]] = []
+		self.portapapeles.al_agregar = lambda elemento: wx.CallAfter(self._al_copiar, elemento)
 		self.teclas = GestorTeclasGlobales(self.ejecutar) if con_teclas else None
 		self.ventana: VentanaPrincipal | None = None
 		self._oyentes_estado: list[Callable[[EstadoEscritorios], None]] = []
@@ -104,6 +117,10 @@ class Controlador:
 	def iniciar(self) -> None:
 		self.servicio.establecer_reglas(self.reglas())
 		self.servicio.iniciar()
+		try:
+			self.portapapeles.iniciar()
+		except Exception:  # noqa: BLE001 - sin historial, el resto del programa sigue funcionando
+			log.exception("No se pudo iniciar el historial del portapapeles")
 		if self.teclas is not None:
 			self.teclas.iniciar()
 			self.aplicar_teclas()
@@ -113,6 +130,7 @@ class Controlador:
 		if self.teclas is not None:
 			self.teclas.detener()
 		self.servicio.detener()
+		self.portapapeles.detener()
 
 	# ── Preferencias ────────────────────────────────────────────────────────
 
@@ -126,6 +144,24 @@ class Controlador:
 			seguir_ventana=bool(obtener("ventanas.seguir_ventana", False)),
 			intervalo_sondeo_ms=int(obtener("escritorios.intervalo_sondeo_ms", 250)),
 			aplicar_reglas_al_iniciar=bool(obtener("ventanas.aplicar_reglas_al_iniciar", False)),
+		)
+
+	def preferencias_portapapeles(self) -> PreferenciasPortapapeles:
+		"""Se llama desde el hilo del monitor en cada copia."""
+		obtener = self.config.obtener
+		excluidos = str(obtener("portapapeles.programas_excluidos", ""))
+		return PreferenciasPortapapeles(
+			activo=bool(obtener("portapapeles.activo", True)),
+			maximo=int(obtener("portapapeles.maximo", 500)),
+			guardar_html=bool(obtener("portapapeles.guardar_html", True)),
+			guardar_archivos=bool(obtener("portapapeles.guardar_archivos", True)),
+			guardar_imagenes=bool(obtener("portapapeles.guardar_imagenes", True)),
+			maximo_imagen_mb=int(obtener("portapapeles.maximo_imagen_mb", 20)),
+			ignorar_privados=bool(obtener("portapapeles.ignorar_privados", True)),
+			programas_excluidos=tuple(p.strip() for p in excluidos.replace(";", ",").split(",") if p.strip()),
+			restaurar_tras_pegar=bool(obtener("portapapeles.restaurar_tras_pegar", True)),
+			retraso_restaurar_ms=int(obtener("portapapeles.retraso_restaurar_ms", 500)),
+			metodo_pegado=str(obtener("portapapeles.metodo_pegado", "control_v")),
 		)
 
 	def atajos(self) -> dict[str, str]:
@@ -298,10 +334,114 @@ class Controlador:
 			wx.CallAfter(self.anunciar_escritorio)
 		elif accion == "anunciar_ventanas":
 			wx.CallAfter(self.anunciar_ventanas)
+		elif accion in ("portapapeles_rapido", "emoticonos_rapido"):
+			# La ventana de destino se mira AHORA, antes de que se abra la nuestra.
+			destino = w32.ventana_activa()
+			if destino and w32.pid(destino) == os.getpid():
+				destino = 0
+			wx.CallAfter(self._abrir_rapida, accion, destino)
+		elif accion == "pausar_portapapeles":
+			wx.CallAfter(self.alternar_captura)
 		elif accion in ("eliminar_actual", "renombrar_actual", "selector", "buscar_ventana", "mostrar_gestor"):
 			wx.CallAfter(self._accion_de_interfaz, accion)
 		else:
 			log.warning("Acción desconocida: %s", accion)
+
+	# ── Portapapeles y emoticonos ───────────────────────────────────────────
+
+	def suscribir_portapapeles(self, oyente: Callable[[], None]) -> None:
+		self._oyentes_portapapeles.append(oyente)
+
+	def _al_copiar(self, elemento: Elemento) -> None:
+		"""Hilo principal: algo nuevo en el historial."""
+		for oyente in list(self._oyentes_portapapeles):
+			try:
+				oyente()
+			except Exception:  # noqa: BLE001
+				log.exception("Error al refrescar el historial")
+		if self.config.obtener("portapapeles.anunciar_copias", False):
+			self.hablar(_("Copiado: {resumen}").format(resumen=elemento.resumen(80)))
+
+	def copiar_elemento(self, identificador: int) -> None:
+		try:
+			elemento = self.portapapeles.copiar(identificador)
+		except Exception:  # noqa: BLE001 - portapapeles ocupado por otro programa
+			log.warning("No se pudo copiar el elemento %s", identificador, exc_info=True)
+			self.avisar(_("No se pudo copiar: otro programa está usando el portapapeles."))
+			return
+		if elemento is not None:
+			self.hablar(_("Copiado al portapapeles"), True)
+			self._al_copiar_interno()
+
+	def _al_copiar_interno(self) -> None:
+		for oyente in list(self._oyentes_portapapeles):
+			oyente()
+
+	def copiar_texto(self, texto: str) -> None:
+		try:
+			self.portapapeles.copiar_texto(texto)
+		except Exception:  # noqa: BLE001
+			log.warning("No se pudo copiar el texto", exc_info=True)
+			self.avisar(_("No se pudo copiar: otro programa está usando el portapapeles."))
+
+	def _en_hilo(self, nombre: str, trabajo: Callable[[], bool], mensaje_fallo: str) -> None:
+		"""Pegar y escribir esperan al foco y duermen: nunca en el hilo de la interfaz."""
+
+		def envoltorio() -> None:
+			try:
+				correcto = trabajo()
+			except Exception:  # noqa: BLE001
+				log.exception("Falló «%s»", nombre)
+				correcto = False
+			if not correcto:
+				wx.CallAfter(self.avisar, mensaje_fallo)
+
+		threading.Thread(target=envoltorio, name=nombre, daemon=True).start()
+
+	def pegar_elemento(self, identificador: int, destino: int) -> None:
+		"""Pega un elemento del historial en la ventana ``destino`` (o en la anterior si no se sabe)."""
+		if not destino:
+			self.con_destino_anterior(lambda hwnd: self.pegar_elemento(identificador, hwnd) if hwnd else self.copiar_elemento(identificador))
+			return
+		self._en_hilo(
+			"pegar",
+			lambda: self.portapapeles.pegar(identificador, destino),
+			_("No se pudo volver a la ventana para pegar. El elemento queda copiado en el portapapeles."),
+		)
+
+	def insertar_texto(self, texto: str, destino: int) -> None:
+		"""Escribe ``texto`` (un emoticono) en la ventana ``destino``."""
+		from app.services import pegado
+
+		if not destino:
+			self.con_destino_anterior(lambda hwnd: self.insertar_texto(texto, hwnd) if hwnd else self.copiar_texto(texto))
+			return
+		metodo = str(self.config.obtener("emoticonos.metodo", pegado.METODO_ESCRIBIR))
+		self._en_hilo(
+			"insertar",
+			lambda: pegado.insertar_texto(destino, texto, metodo, self.portapapeles.monitor.hwnd, self.portapapeles.anotar_propia),
+			_("No se pudo volver a la ventana para insertar el texto."),
+		)
+
+	def con_destino_anterior(self, al_obtener: Callable[[int], None]) -> None:
+		"""Busca la ventana usada antes del gestor (la más reciente del escritorio actual que no es nuestra)."""
+
+		def trabajo(motor) -> int:
+			actual = motor.id_actual()
+			for ventana in motor.ventanas(os.getpid()):
+				if ventana.id_escritorio == actual or ventana.en_todos:
+					return ventana.hwnd
+			return 0
+
+		self.servicio.encolar(_("buscar la ventana anterior"), trabajo, lambda hwnd: wx.CallAfter(al_obtener, hwnd), lambda _m: wx.CallAfter(al_obtener, 0))
+
+	def alternar_captura(self) -> None:
+		self.portapapeles.pausado = not self.portapapeles.pausado
+		self.hablar(_("Captura del portapapeles detenida") if self.portapapeles.pausado else _("Captura del portapapeles reanudada"), True)
+
+	def _abrir_rapida(self, accion: str, destino: int) -> None:
+		if self.ventana:
+			self.ventana.abrir_ventana_rapida(accion, destino)
 
 	def _accion_de_interfaz(self, accion: str) -> None:
 		if self.ventana:

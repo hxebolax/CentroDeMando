@@ -85,7 +85,7 @@ def test_menu_de_bandeja_con_escritorios(app_wx):
 		menu = icono.CreatePopupMenu()
 		elementos = [item for item in menu.GetMenuItems() if not item.IsSeparator()]
 		etiquetas = [item.GetItemLabel() for item in elementos]
-		assert etiquetas[0] == "&Mostrar el gestor"
+		assert etiquetas[0] == "&Mostrar Centro de Mando"
 		assert etiquetas[1:3] == ["&1. Escritorio 1", "&2. Correo && más"], "el & del nombre se dobla"
 		assert elementos[2].IsChecked() and not elementos[1].IsChecked(), "el escritorio actual va marcado"
 		assert etiquetas[-1] == "&Salir"

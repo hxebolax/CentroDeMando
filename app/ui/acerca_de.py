@@ -33,9 +33,9 @@ def texto_acerca_de() -> str:
 		_("Copyright (C) {anio} {autor}").format(anio=ANIO_COPYRIGHT, autor=AUTOR),
 		"",
 		_(
-			"Gestor accesible de los escritorios virtuales de Windows: cambiar de escritorio al instante, "
-			"también de forma cíclica, crearlos, ordenarlos y moverse con sus ventanas, todo con teclas "
-			"globales y pensado para lectores de pantalla."
+			"Centro de mando accesible para Windows: escritorios virtuales, historial del portapapeles, "
+			"emoticonos y notificaciones, todo desde la bandeja con teclas globales y pensado para "
+			"lectores de pantalla."
 		),
 		"",
 		_("Si le gusta este trabajo, puede invitar al autor a un café desde Ayuda, Invítame a un café."),

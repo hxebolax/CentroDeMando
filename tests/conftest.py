@@ -21,6 +21,18 @@ if str(RAIZ) not in sys.path:
 	sys.path.insert(0, str(RAIZ))
 
 
+_CATALOGO = []
+
+
+def _catalogo_emojis():
+	"""Un solo catálogo para toda la sesión: cargarlo en cada prueba sería lento."""
+	if not _CATALOGO:
+		from app.services.emojis import CatalogoEmojis
+
+		_CATALOGO.append(CatalogoEmojis(RAIZ / "data" / "emojis" / "emojis_es.json"))
+	return _CATALOGO[0]
+
+
 @pytest.fixture(autouse=True)
 def datos_temporales(tmp_path, monkeypatch):
 	"""Redirige ``data`` a una carpeta temporal y silencia la voz."""
@@ -30,6 +42,10 @@ def datos_temporales(tmp_path, monkeypatch):
 	from app.core import voz
 
 	monkeypatch.setattr(voz, "hablar", lambda texto, interrumpir=False: False)
+	# Los emoticonos se leen siempre de los datos del proyecto (data temporal no los tiene).
+	from app.services import emojis
+
+	monkeypatch.setattr(emojis, "_catalogo", _catalogo_emojis())
 	from app.ui.accesibilidad import voz as voz_listas
 
 	# La voz de las listas se anota en lugar de hablar: las pruebas la comprueban.

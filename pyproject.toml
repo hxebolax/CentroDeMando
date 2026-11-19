@@ -1,10 +1,10 @@
 # Metadatos, ruff y pytest. La compilación NO usa este archivo: la hace setup_cx.py.
 
 [project]
-name = "gestor-de-escritorios-virtuales"
+name = "centro-de-mando"
 # Debe coincidir con APP_VERSION de app/core/version.py (lo comprueba una prueba).
-version = "1.1.0"
-description = "Aplicación de escritorio accesible para Windows hecha con wxPython."
+version = "2.0.0"
+description = "Centro de Mando: escritorios virtuales, portapapeles, emoticonos y notificaciones de Windows, accesible con lector de pantalla."
 # Versión mínima de Python del proyecto: ajústela a la elegida al crearlo.
 requires-python = ">=3.15"
 
