@@ -1,10 +1,15 @@
-"""Icono de la bandeja del sistema con menú accesible de escritorios.
+r"""Icono de la bandeja del sistema con menú accesible de escritorios.
 
 - El icono está siempre (opción «Icono siempre en la bandeja»): el gestor vive
   ahí y las teclas globales funcionan aunque la ventana esté oculta.
-- El texto emergente dice solo el escritorio actual («Escritorio 3: Trabajo»):
-  Windows ya le antepone el nombre del programa, y es lo que el lector lee al
-  llegar al icono.
+- Windows 11 nombra el botón de la bandeja con el PRIMER texto emergente que
+  recibió el icono (lo guarda para siempre en el registro, en
+  ``HKCU\Control Panel\NotifyIconSettings``, valor ``InitialTooltip``) seguido
+  del texto actual. Por eso el primer texto es SIEMPRE el nombre del programa
+  y los siguientes dicen solo el escritorio actual: el lector lee «Centro de
+  Mando Escritorio 3: Trabajo». Si una versión anterior dejó guardado otro
+  texto («Conectando con los escritorios virtuales»),
+  ``corregir_nombre_registrado`` lo arregla al arrancar.
 - El menú se construye en ``CreatePopupMenu`` (wx lo pide en cada apertura),
   así siempre refleja los escritorios de ese momento. Los escritorios van como
   elementos de opción (``ITEM_RADIO``): el lector dice cuál está marcado.
@@ -70,19 +75,26 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 		self._al_accion = al_accion or (lambda _accion: None)
 		self._obtener_estado = obtener_estado or EstadoEscritorios
 		self._al_menu = al_menu or (lambda _nombre: None)
-		self._texto_actual = _("Conectando con los escritorios virtuales")
+		# Primer texto: el nombre del programa (Windows lo usa como nombre fijo del icono).
+		self._texto_actual = texto
 		# Un clic o un doble clic restauran: la acción más frecuente, a un gesto.
 		self.Bind(wx.adv.EVT_TASKBAR_LEFT_UP, self._restaurar)
 		self.Bind(wx.adv.EVT_TASKBAR_LEFT_DCLICK, self._restaurar)
 
 	def mostrar(self) -> bool:
 		"""Pone el icono en la bandeja. El texto emergente es lo que lee el lector."""
-		return bool(self.SetIcon(_icono_aplicacion(), self._texto_actual))
+		corregir_nombre_registrado(self._texto)
+		# Primero con el nombre del programa y, si ya se conoce, enseguida el escritorio.
+		if not self.SetIcon(_icono_aplicacion(), self._texto):
+			return False
+		self._texto_actual = self._texto
+		self._poner_texto()
+		return True
 
 	def actualizar(self, estado: EstadoEscritorios) -> None:
 		"""Pone en el texto emergente el escritorio actual."""
 		if not estado.escritorios:
-			# Aún sin conectar: se queda «Conectando...».
+			# Aún sin conectar: se queda el nombre del programa.
 			return
 		self._estado = estado
 		self._poner_texto()
@@ -92,11 +104,18 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 		self._no_leidas = cuantas
 		self._poner_texto()
 
+	def poner_no_molestar(self, activo: bool) -> None:
+		"""Añade «No molestar» al texto del icono mientras está en vigor."""
+		self._no_molestar = activo
+		self._poner_texto()
+
 	def _poner_texto(self) -> None:
 		estado = getattr(self, "_estado", None)
 		if estado is None or not estado.escritorios:
 			return
 		texto = texto_emergente(estado)
+		if getattr(self, "_no_molestar", False):
+			texto += ". " + _("No molestar")
 		cuantas = getattr(self, "_no_leidas", 0)
 		if cuantas:
 			texto += ". " + (_("1 notificación sin leer") if cuantas == 1 else _("{n} notificaciones sin leer").format(n=cuantas))
@@ -151,6 +170,9 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 		self._agregar(menu, _("Historial del &portapapeles..."), lambda _e: self._al_accion("portapapeles_rapido"))
 		self._agregar(menu, _("Insertar un emo&ji..."), lambda _e: self._al_accion("emoticonos_rapido"))
 		self._agregar(menu, _("&Historial de notificaciones..."), lambda _e: self._al_accion("notificaciones_rapido"))
+		item = menu.AppendCheckItem(wx.ID_ANY, _("No molesta&r"))
+		item.Check(bool(getattr(self, "_no_molestar", False)))
+		menu.Bind(wx.EVT_MENU, lambda _e: self._al_accion("no_molestar"), item)
 		self._agregar(menu, _("&Teclas globales..."), lambda _e: self._al_menu("teclas_globales"))
 		self._agregar(menu, _("&Opciones..."), lambda _e: self._al_menu("opciones"))
 		menu.AppendSeparator()
@@ -165,6 +187,57 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 
 	def _restaurar(self, _evento: wx.Event | None = None) -> None:
 		self._al_restaurar()
+
+
+CLAVE_ICONOS = r"Control Panel\NotifyIconSettings"
+
+
+def corregir_nombre_registrado(nombre: str, ejecutable: str | None = None) -> int:
+	"""Pone ``nombre`` como nombre fijo del icono que Windows 11 tiene guardado.
+
+	Windows guarda en ``InitialTooltip`` el primer texto que vio del icono de
+	cada ejecutable y lo usa siempre como comienzo del nombre que lee el
+	lector. Solo se toca la entrada de NUESTRO ejecutable. Devuelve cuántas se
+	corrigieron (0 si no hacía falta o no es Windows 11).
+	"""
+	import sys
+
+	try:
+		import winreg
+	except ImportError:
+		return 0
+	# Desde un entorno virtual, Windows ve el python del sistema (_base_executable).
+	candidatos = {str(r).casefold() for r in ((ejecutable,) if ejecutable else (sys.executable, getattr(sys, "_base_executable", "")))}
+	candidatos.discard("")
+	corregidas = 0
+	try:
+		raiz = winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLAVE_ICONOS)
+	except OSError:
+		return 0
+	with raiz:
+		indice = 0
+		while True:
+			try:
+				subclave = winreg.EnumKey(raiz, indice)
+			except OSError:
+				break
+			indice += 1
+			try:
+				with winreg.OpenKey(raiz, subclave, 0, winreg.KEY_READ | winreg.KEY_SET_VALUE) as clave:
+					ruta, _tipo = winreg.QueryValueEx(clave, "ExecutablePath")
+					if str(ruta).casefold() not in candidatos:
+						continue
+					try:
+						actual, _tipo = winreg.QueryValueEx(clave, "InitialTooltip")
+					except OSError:
+						actual = None
+					if actual != nombre:
+						winreg.SetValueEx(clave, "InitialTooltip", 0, winreg.REG_SZ, nombre)
+						corregidas += 1
+						log.info("Nombre del icono de la bandeja corregido: %r -> %r", actual, nombre)
+			except OSError:
+				continue
+	return corregidas
 
 
 def _icono_aplicacion() -> wx.Icon:

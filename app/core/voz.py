@@ -52,3 +52,22 @@ def hablar(texto: str, interrumpir: bool = False) -> bool:
 	except Exception:  # noqa: BLE001 - un fallo de voz no debe romper nada
 		log.debug("No se pudo anunciar por voz: %s", texto, exc_info=True)
 		return False
+
+
+def hay_lector_de_pantalla() -> bool:
+	"""``True`` si hay un lector de pantalla en marcha (NVDA, JAWS, Narrador...).
+
+	Los lectores activan la marca ``SPI_GETSCREENREADER`` de Windows mientras
+	funcionan. Se consulta cada vez: el lector puede abrirse o cerrarse con la
+	aplicación ya en marcha.
+	"""
+	try:
+		import ctypes
+
+		marca = ctypes.c_int(0)
+		# SPI_GETSCREENREADER = 0x0046
+		if ctypes.windll.user32.SystemParametersInfoW(0x0046, 0, ctypes.byref(marca), 0):
+			return bool(marca.value)
+	except Exception:  # noqa: BLE001 - fuera de Windows o sin user32
+		log.debug("No se pudo consultar si hay lector de pantalla", exc_info=True)
+	return False

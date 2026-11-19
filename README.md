@@ -2,7 +2,7 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 1.0.0
+- Versión: 1.1.0
 - Autor: Héctor J. Benítez Corredera
 - Licencia: [GPL-3.0](LICENSE)
 - Plataforma: Windows 10 y 11 de 64 bits
@@ -19,7 +19,7 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 - Crear, renombrar, reordenar, eliminar (también todos los vacíos) y fondo por escritorio.
 - Mover la ventana activa a otro escritorio o a uno nuevo, mostrarla en todos y buscar cualquier ventana en todos los escritorios.
 - Reglas para llevar solas las ventanas de un programa a su escritorio.
-- Al cambiar, el foco va a la última ventana usada y se anuncia el escritorio (sin repetir lo que ya dice NVDA).
+- Al cambiar, el foco va a la última ventana usada. Con lector de pantalla el escritorio se oye una sola vez (Windows ya lo anuncia y Centro de Mando no lo repite); sin lector, lo dice Centro de Mando.
 
 **Historial del portapapeles**
 
@@ -39,6 +39,7 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 - Historial propio de las notificaciones de Windows y de las aplicaciones: Windows las borra; Centro de Mando las guarda.
 - Control+Alt+Windows+A abre el historial; Control+Alt+Windows+U dice la última y cuántas quedan sin leer.
 - Leídas y no leídas, favoritas, búsqueda, filtro por aplicación, abrir la aplicación que la envió, descartar en Windows, ignorar aplicaciones y exportar a CSV.
+- **No molestar** (Control+Alt+Windows+Q), a mano o con horario diario: calla los avisos automáticos sin dejar de guardar las notificaciones; algunas aplicaciones pueden anunciarse igualmente.
 
 **Fragmentos de texto**
 
@@ -49,7 +50,7 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 
 - Cambiar la salida predeterminada con una tecla y oír su nombre, volumen general, volumen y silencio por aplicación y micrófono.
 - Volumen y silencio **de la aplicación enfocada** con teclas globales, también en navegadores; «solo esta aplicación» sin silenciar nunca el lector.
-- **Salida de audio por aplicación** (como el Mezclador de volumen de Windows) y aviso al conectar o desconectar dispositivos.
+- **Salida de audio por aplicación** (como el Mezclador de volumen de Windows) y aviso al conectar o desconectar dispositivos, sin vaivenes de monitores HDMI que reposan.
 
 **Sistema**
 
@@ -101,6 +102,7 @@ Ayuda, Buscar actualizaciones (y una comprobación automática que se puede desa
 - Control+Alt+Windows+V: historial del portapapeles.
 - Control+Alt+Windows+E: emoticonos.
 - Control+Alt+Windows+A: historial de notificaciones.
+- Control+Alt+Windows+Q: No molestar.
 - Control+Alt+Windows+G: mostrar u ocultar Centro de Mando.
 
 ### Si le gusta este trabajo
@@ -197,7 +199,8 @@ python tools/generar_emojis.py --origen adjuntos/datos_emoji
 ### Publicar una versión
 
 1. Suba `APP_VERSION` en `app/core/version.py` (y en `pyproject.toml`) y escriba sus novedades en `data/docs/novedades.md` bajo `## <versión>`.
-2. `entorno.bat compilar` (desde cero).
+2. `entorno.bat compilar` (desde cero). `setup_cx.py` sustituye después el `python3t.dll` que copia cx_Freeze por el de `abi3t-compat`: el de la raíz de Python 3.15 reenvía al intérprete sin GIL y sin él `cryptography` (la verificación de firmas) no carga. `tools/publicar.py` se niega a publicar una compilación con el DLL equivocado.
+   - Ojo: compilar borra `build/CentroDeMando` entero, incluida su carpeta `data` si se ha usado esa copia para probar.
 3. Empaquetar, firmar y publicar:
 
 ```bash

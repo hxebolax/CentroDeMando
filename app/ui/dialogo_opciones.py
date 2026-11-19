@@ -113,24 +113,38 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 		"Anuncios",
 		[
 			Opcion(
-				"anuncios.anunciar_cambios",
-				"Anunciar el escritorio al ca&mbiar",
-				"Dice el número y el nombre del escritorio al que se llega.",
-			),
-			Opcion(
-				"anuncios.anunciar_cambios_externos",
-				"Anunciar también los cambios hechos &fuera de Centro de Mando",
-				"También al cambiar con las teclas de Windows, la Vista de tareas u otros programas.",
+				"anuncios.cambio_escritorio",
+				"Anunciar el escritorio al ca&mbiar:",
+				"Automático: con un lector de pantalla (NVDA, JAWS, Narrador) Windows ya dice el escritorio al que se llega, "
+				"así que Centro de Mando no lo repite; sin lector, lo dice con la voz de Windows. "
+				"Las demás opciones lo dicen siempre en los cambios hechos con Centro de Mando, en todos o en ninguno.",
+				"elegir",
+				opciones=(
+					"Automático (no repetir lo que ya dice Windows)",
+					"Solo los cambios hechos con Centro de Mando",
+					"Todos, también con las teclas de Windows",
+					"Nunca",
+				),
+				valores=("auto", "propios", "todos", "nunca"),
 			),
 			Opcion("anuncios.decir_numero", "Decir el &número del escritorio", "Incluye el número aunque el escritorio tenga nombre."),
 			Opcion("anuncios.decir_total", "Decir el &total de escritorios", "Añade «de 12» al anuncio."),
 			Opcion(
-				"anuncios.decir_ventanas", "Decir cuántas &ventanas tiene", "Añade cuántas ventanas hay en el escritorio al que se llega."
+				"anuncios.decir_ventanas",
+				"Decir cuántas &ventanas tiene",
+				"Añade cuántas ventanas hay en el escritorio al que se llega. En modo automático con lector de pantalla, se dice solo esto tras el anuncio de Windows.",
 			),
 			Opcion(
 				"anuncios.dispositivos_audio",
 				"Avisar al conectar o desconectar dispositivos de au&dio",
-				"Dice «Conectado» o «Desconectado» y el nombre del dispositivo (auriculares, altavoces Bluetooth...).",
+				"Dice «Conectado» o «Desconectado» y el nombre del dispositivo (auriculares, altavoces Bluetooth...). "
+				"Espera unos segundos a que el cambio se asiente: si se desconecta y vuelve a conectarse enseguida, no dice nada.",
+			),
+			Opcion(
+				"anuncios.dispositivos_pantallas",
+				"Avisar también del audio de monitores y televisores (&HDMI, DisplayPort)",
+				"Windows desconecta y vuelve a conectar el audio de la pantalla cada vez que esta reposa o despierta. "
+				"Desactivado de fábrica para no avisar sin motivo.",
 			),
 			Opcion("anuncios.tono", "T&ono distinto para cada escritorio", "Un pitido más agudo cuanto mayor es el número del escritorio."),
 			Opcion(
@@ -309,6 +323,13 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				"Una notificación se da por leída tras un momento seleccionada en la lista. Espacio la marca o desmarca a mano.",
 			),
 			Opcion(
+				"notificaciones.apps_anunciadas",
+				"Anunciar solo las de estas aplicacion&es, separadas por comas (vacío = todas):",
+				"Si escribe aplicaciones aquí, solo se dicen en voz alta sus notificaciones; las demás se guardan en silencio. "
+				"Basta con parte del nombre: «whatsapp» vale para «WhatsApp Beta».",
+				"texto",
+			),
+			Opcion(
 				"notificaciones.apps_ignoradas",
 				"Aplicaciones &ignoradas, separadas por comas:",
 				"Las notificaciones de estas aplicaciones no se guardan. También se añade desde el menú Notificaciones.",
@@ -329,6 +350,32 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				"int",
 				0,
 				3650,
+			),
+		],
+	),
+	(
+		"No molestar",
+		[
+			Opcion(
+				"",
+				"No molestar calla los avisos automáticos: notificaciones nuevas, dispositivos de audio y copias del portapapeles. "
+				"Las notificaciones se siguen guardando y las alarmas siguen sonando. Se activa también con Control+Alt+Windows+Q.",
+				"",
+				"nota",
+			),
+			Opcion("no_molestar.activo", "No &molestar activado ahora", "Lo activa o desactiva a mano hasta que se vuelva a cambiar."),
+			Opcion(
+				"no_molestar.programado",
+				"Activarlo cada día en un &horario",
+				"Se activa solo entre las dos horas de abajo. Si la de fin es anterior a la de inicio, cruza la medianoche.",
+			),
+			Opcion("no_molestar.desde", "&Desde (hora:minutos, por ejemplo 23:00):", "Hora a la que empieza cada día.", "texto"),
+			Opcion("no_molestar.hasta", "Ha&sta (hora:minutos, por ejemplo 08:00):", "Hora a la que termina.", "texto"),
+			Opcion(
+				"no_molestar.apps_permitidas",
+				"Aplicaciones que se anuncian &igualmente, separadas por comas:",
+				"Las notificaciones de estas aplicaciones se dicen aunque No molestar esté activo.",
+				"texto",
 			),
 		],
 	),

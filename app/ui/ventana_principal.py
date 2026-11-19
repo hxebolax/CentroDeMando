@@ -169,7 +169,7 @@ class VentanaPrincipal(wx.Frame):
 		self._crear_menus()
 		self._crear_contenido()
 		self.CreateStatusBar()
-		self.SetStatusText(_("Conectando con los escritorios virtuales..."))
+		self.SetStatusText(_("Cargando los escritorios virtuales..."))
 		self._aplicar_barra_estado(bool(self._config.obtener("ventana.barra_estado", True)))
 		self.elementos_menu["ver_todas"].Check(bool(self._config.obtener("ventana.ver_todas", False)))
 		self._aplicar_icono()
@@ -183,6 +183,7 @@ class VentanaPrincipal(wx.Frame):
 		self.Bind(wx.EVT_CHAR_HOOK, self._al_tecla_ventana)
 
 		self.controlador.suscribir(self._al_cambiar_estado)
+		self.controlador.suscribir_no_molestar(lambda activo: self._bandeja.poner_no_molestar(activo) if self._bandeja is not None else None)
 		self.reconstruir_menu_accion()
 
 		self._temporizador_buzon = wx.Timer(self)
@@ -438,6 +439,7 @@ class VentanaPrincipal(wx.Frame):
 				al_menu=self._al_menu_bandeja,
 			)
 			self._bandeja.actualizar(self._estado)
+			self._bandeja.poner_no_molestar(self.controlador.no_molestar_activo())
 		if not self._bandeja.IsIconInstalled() and not self._bandeja.mostrar():
 			log.warning("No se pudo poner el icono en la bandeja.")
 			self._quitar_bandeja()
@@ -1401,6 +1403,7 @@ class VentanaPrincipal(wx.Frame):
 		"""Aplica al momento lo que no se lee en cada uso."""
 		self.controlador.aplicar_gancho()
 		self._aplicar_bandeja()
+		self.controlador.avisar_no_molestar()
 		nivel = str(self._config.obtener("registro.nivel", "INFO")).upper()
 		if nivel in ("DEBUG", "INFO", "WARNING", "ERROR"):
 			logging.getLogger().setLevel(nivel)

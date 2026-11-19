@@ -10,8 +10,13 @@ Qué deja en ``data/logs``:
   uno rotativo porque en Windows rotar un archivo que otro proceso tiene
   abierto (una segunda instancia arrancando) falla con ``WinError 32``. Se
   conservan las ``SESIONES_A_CONSERVAR`` más recientes.
-- ``fallo_nativo.log``: volcado de ``faulthandler`` si el proceso muere por un
-  fallo de C (una DLL, wxWidgets...).
+- ``fallo_nativo.log``: volcado de ``faulthandler`` durante la sesión.
+  En Windows, faulthandler también escribe excepciones que NO cierran el
+  programa (por ejemplo ``0x8001010d``, una llamada COM que Windows rechaza y
+  la propia biblioteca gestiona). Por eso, al cerrar con normalidad
+  (``cerrar_sesion_limpia``) se resume en el registro de la sesión y se borra;
+  si al arrancar todavía existe, la sesión anterior terminó de golpe y se
+  conserva como ``fallo_nativo_AAAAMMDD_HHMMSS.log``.
 - ``arranque_fallido.log``: lo escribe ``registrar_fallo_de_arranque`` cuando
   falla el propio arranque.
 
@@ -176,8 +181,13 @@ def configurar_registro(
 	sys.excepthook = _gancho_excepciones
 	threading.excepthook = _gancho_hilos
 
+	anterior = _conservar_fallo_anterior(carpeta)
 	try:
-		_fallo_nativo = open(carpeta / "fallo_nativo.log", "a", encoding="utf-8")  # noqa: SIM115 - abierto toda la sesión
+		# "a" y no "w": una segunda instancia que arranca un instante (y se cierra
+		# al ver la primera) no debe vaciar el volcado de la que sigue abierta.
+		_fallo_nativo = open(carpeta / NOMBRE_FALLO_NATIVO, "a", encoding="utf-8")  # noqa: SIM115 - abierto toda la sesión
+		_fallo_nativo.seek(0, os.SEEK_END)
+		_inicio_volcado[0] = _fallo_nativo.tell()
 		faulthandler.enable(_fallo_nativo, all_threads=True)
 	except OSError, RuntimeError:
 		log.warning("No se pudo activar el volcado de fallos nativos", exc_info=True)
@@ -192,7 +202,70 @@ def configurar_registro(
 		paths.CONGELADA,
 		paths.ruta_datos(),
 	)
+	if anterior is not None:
+		log.warning("La sesión anterior terminó de forma inesperada; su volcado está en %s", anterior.name)
 	return archivo
+
+
+NOMBRE_FALLO_NATIVO = "fallo_nativo.log"
+# Tamaño del volcado al empezar esta sesión: lo anterior no es de esta sesión.
+_inicio_volcado = [0]
+
+
+def _conservar_fallo_anterior(carpeta: Path) -> Path | None:
+	"""Si queda un volcado con contenido, la sesión anterior no cerró bien: se aparta."""
+	ruta = carpeta / NOMBRE_FALLO_NATIVO
+	try:
+		if not ruta.is_file() or ruta.stat().st_size == 0:
+			return None
+		destino = carpeta / f"fallo_nativo_{time.strftime('%Y%m%d_%H%M%S', time.localtime(ruta.stat().st_mtime))}.log"
+		os.replace(ruta, destino)
+		return destino
+	except OSError:
+		return None
+
+
+def resumir_volcado(texto: str) -> list[str]:
+	"""Códigos de las excepciones de un volcado de faulthandler (función pura)."""
+	codigos = []
+	for linea in texto.splitlines():
+		if linea.startswith("Windows fatal exception:"):
+			codigo = linea.rsplit(" ", 1)[-1]
+			if codigo not in codigos:
+				codigos.append(codigo)
+	return codigos
+
+
+def cerrar_sesion_limpia() -> None:
+	"""Cierre normal: el volcado de esta sesión no fue un fallo; se resume y se borra."""
+	global _fallo_nativo
+	if _fallo_nativo is None:
+		return
+	ruta = Path(_fallo_nativo.name)
+	try:
+		faulthandler.disable()
+		_fallo_nativo.close()
+	except OSError, RuntimeError:
+		log.debug("No se pudo cerrar el volcado de fallos nativos", exc_info=True)
+	_fallo_nativo = None
+	try:
+		if not ruta.is_file():
+			return
+		inicio = _inicio_volcado[0]
+		with open(ruta, "rb") as archivo:
+			archivo.seek(inicio)
+			texto = archivo.read().decode("utf-8", errors="replace")
+		if texto.strip():
+			log.info(
+				"Excepciones nativas no fatales durante la sesión (Windows las gestionó; el programa siguió funcionando): %s",
+				", ".join(resumir_volcado(texto)) or "sin código",
+			)
+		if inicio == 0:
+			ruta.unlink(missing_ok=True)
+		else:
+			os.truncate(ruta, inicio)
+	except OSError:
+		log.debug("No se pudo borrar %s", ruta, exc_info=True)
 
 
 def detener_registro() -> None:

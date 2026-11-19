@@ -60,15 +60,23 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"interceptar_flechas_nativas": False,
 	},
 	"anuncios": {
-		"anunciar_cambios": True,
-		# NVDA ya anuncia el escritorio al cambiar con Control+Windows+flechas: de fábrica no se repite.
-		"anunciar_cambios_externos": False,
+		# Cuándo se dice el escritorio al cambiar:
+		# - "auto": solo si NO hay lector de pantalla. Con NVDA, JAWS o Narrador
+		#   Windows ya anuncia el escritorio (también cuando cambia Centro de
+		#   Mando) y decirlo aquí lo duplicaría.
+		# - "propios": los cambios hechos con Centro de Mando.
+		# - "todos": también Control+Windows+flechas, la Vista de tareas...
+		# - "nunca".
+		"cambio_escritorio": "auto",
 		"decir_numero": True,
 		"decir_total": False,
 		"decir_ventanas": False,
 		"tono": False,
 		# Decir «Conectado: Auriculares» o «Desconectado: ...» al enchufar o quitar un dispositivo de audio.
 		"dispositivos_audio": True,
+		# Incluir el audio de monitores y televisores (HDMI, DisplayPort): Windows
+		# los desconecta y conecta al reposar la pantalla, y avisaría sin motivo.
+		"dispositivos_pantallas": False,
 		# Espera antes de hablar: así el lector anuncia primero la ventana enfocada
 		# y nuestro aviso no queda cortado por el cambio de foco.
 		"retraso_ms": 150,
@@ -121,6 +129,8 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"marcar_leida_al_ver": True,
 		# Aplicaciones cuyas notificaciones no se guardan, separadas por comas.
 		"apps_ignoradas": "",
+		# Si no está vacía, solo se anuncian por voz las de estas aplicaciones.
+		"apps_anunciadas": "",
 		# 0 = sin límite. Las favoritas no se borran nunca solas.
 		"maximo": 5000,
 		"dias": 90,
@@ -157,6 +167,15 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 	"registro": {
 		"nivel": "INFO",
 	},
+	# Calla los avisos automáticos (notificaciones, dispositivos, copias).
+	"no_molestar": {
+		"activo": False,
+		"programado": False,
+		"desde": "23:00",
+		"hasta": "08:00",
+		# Aplicaciones cuyas notificaciones se anuncian igualmente, separadas por comas.
+		"apps_permitidas": "",
+	},
 }
 
 
@@ -173,6 +192,25 @@ def _tipo_compatible(valor: Any, referencia: Any) -> bool:
 	if isinstance(referencia, (int, float)):
 		return isinstance(valor, (int, float)) and not isinstance(valor, bool)
 	return isinstance(valor, type(referencia))
+
+
+def migrar(guardado: dict[str, Any]) -> None:
+	"""Traduce claves de versiones anteriores a las actuales (en el sitio).
+
+	- 1.0.0 → 1.1.0: ``anuncios.anunciar_cambios`` y ``anunciar_cambios_externos``
+	  pasan a ``anuncios.cambio_escritorio``. Quien lo tenía activado pasa a
+	  «auto», que no repite el anuncio que ya hace Windows con el lector.
+	"""
+	anuncios = guardado.get("anuncios")
+	if isinstance(anuncios, dict) and "anunciar_cambios" in anuncios:
+		propios = anuncios.pop("anunciar_cambios")
+		externos = anuncios.pop("anunciar_cambios_externos", False)
+		if "cambio_escritorio" not in anuncios:
+			if propios is False:
+				anuncios["cambio_escritorio"] = "nunca"
+			else:
+				anuncios["cambio_escritorio"] = "todos" if externos is True else "auto"
+		log.info("Configuración migrada: anuncio de escritorio = %s", anuncios.get("cambio_escritorio"))
 
 
 class Configuracion:
@@ -206,6 +244,7 @@ class Configuracion:
 		if not isinstance(guardado, dict):
 			self._apartar_danado("el contenido no es un objeto JSON")
 			return
+		migrar(guardado)
 		self._fusionar(self._datos, guardado, VALORES_POR_DEFECTO, "")
 
 	def _apartar_danado(self, motivo: str) -> None:

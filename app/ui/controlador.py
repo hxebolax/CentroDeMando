@@ -72,6 +72,36 @@ def componer_anuncio(
 	return texto
 
 
+ANUNCIO_NADA = "nada"
+ANUNCIO_COMPLETO = "completo"
+ANUNCIO_SOLO_VENTANAS = "solo_ventanas"
+
+
+def decidir_anuncio(modo: str, externo: bool, hay_lector: bool, decir_ventanas: bool) -> str:
+	"""Qué decir al cambiar de escritorio (función pura).
+
+	Con lector de pantalla, Windows ya anuncia el escritorio al que se llega,
+	lo cambie quien lo cambie: en modo «auto» no se repite y, como mucho, se
+	añade cuántas ventanas tiene.
+	"""
+	if modo == "nunca":
+		return ANUNCIO_NADA
+	if modo == "todos" or (modo == "propios" and not externo):
+		return ANUNCIO_COMPLETO
+	if modo == "auto" and not hay_lector:
+		return ANUNCIO_NADA if externo else ANUNCIO_COMPLETO
+	if modo == "auto" and decir_ventanas:
+		return ANUNCIO_SOLO_VENTANAS
+	return ANUNCIO_NADA
+
+
+def contar_ventanas(cuantas: int) -> str:
+	"""«Vacío», «1 ventana», «3 ventanas»."""
+	if cuantas == 0:
+		return _("Vacío")
+	return _("1 ventana") if cuantas == 1 else _("{n} ventanas").format(n=cuantas)
+
+
 def describir_ventanas(ventanas: list[InfoVentana], maximo: int = 10) -> str:
 	"""«3 ventanas: Correo, Documento, Navegador» (función pura)."""
 	if not ventanas:
@@ -103,6 +133,8 @@ class Controlador:
 		self.portapapeles.al_agregar = lambda elemento: wx.CallAfter(self._al_copiar, elemento)
 		self.notificaciones = notificaciones or ServicioNotificaciones(self.preferencias_notificaciones)
 		self._oyentes_notificaciones: list[Callable[[], None]] = []
+		self._oyentes_no_molestar: list[Callable[[bool], None]] = []
+		self._temporizador_no_molestar = None
 		self.notificaciones.al_nuevas = lambda nuevas: wx.CallAfter(self._al_notificaciones, nuevas)
 		self.notificaciones.al_cambiar_acceso = lambda acceso: wx.CallAfter(self._al_cambiar_acceso, acceso)
 		self.teclas = GestorTeclasGlobales(self.ejecutar) if con_teclas else None
@@ -127,6 +159,7 @@ class Controlador:
 		self.temporizadores.al_cambiar = lambda: wx.CallAfter(self._al_cambiar_temporizadores)
 		self.temporizadores.iniciar()
 		self._iniciar_vigilante_audio()
+		wx.CallAfter(self._vigilar_no_molestar)
 		try:
 			self.notificaciones.iniciar()
 		except Exception:  # noqa: BLE001 - sin notificaciones, el resto sigue funcionando
@@ -141,6 +174,9 @@ class Controlador:
 			self.teclas.interceptar_flechas_nativas(bool(self.config.obtener("escritorios.interceptar_flechas_nativas", False)))
 
 	def detener(self) -> None:
+		if self._temporizador_no_molestar is not None:
+			self._temporizador_no_molestar.Stop()
+			self._temporizador_no_molestar = None
 		if self.teclas is not None:
 			self.teclas.detener()
 		self.servicio.detener()
@@ -231,13 +267,14 @@ class Controlador:
 
 	def _al_cambiar_actual(self, estado: EstadoEscritorios, origen: str) -> None:
 		self._notificar_estado(estado)
-		if not self.config.obtener("anuncios.anunciar_cambios", True):
-			return
-		if origen == ORIGEN_EXTERNO and not self.config.obtener("anuncios.anunciar_cambios_externos", True):
-			return
 		if self.config.obtener("anuncios.tono", False):
 			sistema.tocar_tono(estado.actual)
-		self.anunciar_escritorio(estado, retrasar=True)
+		modo = str(self.config.obtener("anuncios.cambio_escritorio", "auto"))
+		que = decidir_anuncio(modo, origen == ORIGEN_EXTERNO, voz.hay_lector_de_pantalla(), bool(self.config.obtener("anuncios.decir_ventanas", False)))
+		if que == ANUNCIO_COMPLETO:
+			self.anunciar_escritorio(estado, retrasar=True)
+		elif que == ANUNCIO_SOLO_VENTANAS:
+			self._anunciar_solo_ventanas(estado)
 
 	def anunciar_escritorio(self, estado: EstadoEscritorios | None = None, retrasar: bool = False) -> None:
 		"""Dice el escritorio actual (y sus ventanas si así está configurado)."""
@@ -268,6 +305,19 @@ class Controlador:
 			)
 		else:
 			decir(None)
+
+	def _anunciar_solo_ventanas(self, estado: EstadoEscritorios) -> None:
+		"""Tras el anuncio de Windows, añade solo cuántas ventanas hay («2 ventanas»)."""
+		escritorio = estado.escritorio_actual()
+		if escritorio is None:
+			return
+		retraso = max(0, int(self.config.obtener("anuncios.retraso_ms", 150))) + 400
+
+		def decir(ventanas: list[InfoVentana]) -> None:
+			cuantas = sum(1 for v in ventanas if v.id_escritorio == escritorio.id)
+			wx.CallLater(retraso, self.hablar, contar_ventanas(cuantas))
+
+		self.servicio.obtener_ventanas(lambda ventanas: wx.CallAfter(decir, ventanas))
 
 	def anunciar_ventanas(self) -> None:
 		estado = self.servicio.estado
@@ -412,6 +462,8 @@ class Controlador:
 			equipo.apagar_pantalla()
 		elif accion == "pausar_portapapeles":
 			wx.CallAfter(self.alternar_captura)
+		elif accion == "no_molestar":
+			wx.CallAfter(self.alternar_no_molestar)
 		elif accion == "lanzador":
 			destino = w32.ventana_activa()
 			if destino and w32.pid(destino) == os.getpid():
@@ -447,7 +499,7 @@ class Controlador:
 				oyente()
 			except Exception:  # noqa: BLE001
 				log.exception("Error al refrescar el historial")
-		if self.config.obtener("portapapeles.anunciar_copias", False):
+		if self.config.obtener("portapapeles.anunciar_copias", False) and not self.no_molestar_activo():
 			self.hablar(_("Copiado: {resumen}").format(resumen=elemento.resumen(80)))
 
 	def copiar_elemento(self, identificador: int) -> None:
@@ -561,6 +613,53 @@ class Controlador:
 		self.portapapeles.pausado = not self.portapapeles.pausado
 		self.hablar(_("Captura del portapapeles detenida") if self.portapapeles.pausado else _("Captura del portapapeles reanudada"), True)
 
+	# ── No molestar ─────────────────────────────────────────────────────────
+
+	def no_molestar_activo(self) -> bool:
+		"""«No molestar» en vigor: activado a mano o dentro de su horario."""
+		from app.services import no_molestar
+
+		obtener = self.config.obtener
+		return no_molestar.activo(
+			bool(obtener("no_molestar.activo", False)),
+			bool(obtener("no_molestar.programado", False)),
+			str(obtener("no_molestar.desde", "23:00")),
+			str(obtener("no_molestar.hasta", "08:00")),
+		)
+
+	def alternar_no_molestar(self) -> None:
+		"""Activa o desactiva «No molestar» a mano y lo dice."""
+		en_vigor = self.no_molestar_activo()
+		manual = bool(self.config.obtener("no_molestar.activo", False))
+		if en_vigor and not manual:
+			# Está en vigor por horario: desactivarlo a mano no es posible sin
+			# quitar el horario; se avisa en lugar de no hacer nada.
+			self.hablar(_("No molestar está activo por horario. Cámbielo en Opciones, No molestar."), True)
+			return
+		self.config.establecer("no_molestar.activo", not manual)
+		self.config.guardar()
+		self.hablar(_("No molestar activado") if not manual else _("No molestar desactivado"), True)
+		self.avisar_no_molestar()
+
+	def suscribir_no_molestar(self, oyente: Callable[[bool], None]) -> None:
+		self._oyentes_no_molestar.append(oyente)
+
+	def avisar_no_molestar(self) -> None:
+		"""Avisa a la bandeja y a la ventana del estado actual (también al cambiar de franja)."""
+		en_vigor = self.no_molestar_activo()
+		self._ultimo_no_molestar = en_vigor
+		for oyente in list(self._oyentes_no_molestar):
+			try:
+				oyente(en_vigor)
+			except Exception:  # noqa: BLE001
+				log.exception("Error al avisar del estado de No molestar")
+
+	def _vigilar_no_molestar(self) -> None:
+		"""Cada minuto mira si se entra o se sale de la franja horaria."""
+		if self.no_molestar_activo() != getattr(self, "_ultimo_no_molestar", None):
+			self.avisar_no_molestar()
+		self._temporizador_no_molestar = wx.CallLater(60_000, self._vigilar_no_molestar)
+
 	# ── Notificaciones ──────────────────────────────────────────────────────
 
 	def suscribir_notificaciones(self, oyente: Callable[[bool], None]) -> None:
@@ -578,6 +677,12 @@ class Controlador:
 		self.notificar_no_leidas(hay_nuevas=True)
 		if not self.config.obtener("notificaciones.anunciar_nuevas", False):
 			return
+		from app.services.no_molestar import debe_anunciar_notificacion
+
+		silencio = self.no_molestar_activo()
+		solo_estas = str(self.config.obtener("notificaciones.apps_anunciadas", ""))
+		permitidas = str(self.config.obtener("no_molestar.apps_permitidas", ""))
+		nuevas = [n for n in nuevas if debe_anunciar_notificacion(n.app, n.aumid, solo_estas, silencio, permitidas)]
 		con_texto = self.config.obtener("notificaciones.anunciar_texto", True)
 		for notificacion in nuevas[-3:]:
 			texto = notificacion.resumen()
@@ -682,13 +787,15 @@ class Controlador:
 		from app.services import audio
 
 		def al_cambiar(texto: str) -> None:
-			if self.config.obtener("anuncios.dispositivos_audio", True):
+			if self.config.obtener("anuncios.dispositivos_audio", True) and not self.no_molestar_activo():
 				wx.CallAfter(self.hablar, texto)
 			if self.ventana:
 				wx.CallAfter(lambda: self.ventana.area_audio.refrescar() if self.ventana.area_actual() is self.ventana.area_audio else None)
 
 		try:
-			self._vigilante_audio = audio.VigilanteDispositivos(al_cambiar)
+			self._vigilante_audio = audio.VigilanteDispositivos(
+				al_cambiar, con_pantallas=lambda: bool(self.config.obtener("anuncios.dispositivos_pantallas", False))
+			)
 			self._vigilante_audio.iniciar()
 		except Exception:  # noqa: BLE001 - sin avisos de dispositivos, el resto sigue
 			log.warning("No se pudieron vigilar los dispositivos de audio", exc_info=True)

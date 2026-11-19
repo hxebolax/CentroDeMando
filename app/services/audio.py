@@ -465,47 +465,160 @@ def solo_estas(propias: set[str], nombre: str) -> str:
 # ── Avisos de dispositivos conectados y desconectados ────────────────────────
 
 
+# Factor de forma de un punto de audio (PKEY_AudioEndpoint_FormFactor).
+_CLAVE_FACTOR_FORMA = "{1da5d803-d492-4edd-8c23-e0c0ffee7f0e} 0"
+FACTOR_PANTALLA = 9  # DigitalAudioDisplayDevice: el audio de un monitor o televisor por HDMI o DisplayPort
+ESTADO_ACTIVO = 1
+
+
+@dataclass
+class PuntoAudio:
+	"""Un punto de audio de Windows (una salida o una entrada)."""
+
+	nombre: str
+	activo: bool
+	pantalla: bool = False
+
+
+def resumir_por_nombre(puntos: dict[str, PuntoAudio], con_pantallas: bool) -> dict[str, bool]:
+	"""{nombre: conectado} agrupando los puntos que comparten nombre (función pura).
+
+	Un monitor ASUS por HDMI aparece como dos o tres puntos con el mismo
+	nombre; Windows activa uno y desactiva otro al despertar la pantalla. Para
+	la persona es UN dispositivo: está conectado si alguno de sus puntos lo está.
+	"""
+	resumen: dict[str, bool] = {}
+	for punto in puntos.values():
+		if not punto.nombre or (punto.pantalla and not con_pantallas):
+			continue
+		resumen[punto.nombre] = resumen.get(punto.nombre, False) or punto.activo
+	return resumen
+
+
+def cambios_de_conexion(antes: dict[str, bool], ahora: dict[str, bool]) -> list[str]:
+	"""Avisos «Conectado: X» / «Desconectado: Y» entre dos resúmenes (función pura)."""
+	avisos = []
+	for nombre in sorted(set(antes) | set(ahora)):
+		previo, actual = antes.get(nombre, False), ahora.get(nombre, False)
+		if actual and not previo:
+			avisos.append(f"Conectado: {nombre}")
+		elif previo and not actual:
+			avisos.append(f"Desconectado: {nombre}")
+	return avisos
+
+
 class VigilanteDispositivos:
 	"""Avisa con ``al_cambiar(texto)`` al conectar o desconectar un dispositivo de audio.
 
-	Windows llama desde sus propios hilos: ``al_cambiar`` debe pasar a la
-	interfaz con ``wx.CallAfter``. Los dispositivos Bluetooth llegan como
-	cambios de estado, no como «añadido».
+	- Windows llama desde sus propios hilos: ``al_cambiar`` debe pasar a la
+	  interfaz con ``wx.CallAfter``. Los dispositivos Bluetooth llegan como
+	  cambios de estado, no como «añadido».
+	- Los avisos se agrupan por NOMBRE y se dan cuando los cambios se calman
+	  (``espera`` segundos sin novedades): un dispositivo que se desconecta y
+	  se vuelve a conectar enseguida no dice nada, y uno con varios puntos
+	  (monitores HDMI, cascos con micrófono) avisa una sola vez.
+	- Las pantallas (audio por HDMI o DisplayPort) solo avisan si
+	  ``con_pantallas()`` lo pide: al reposar y despertar el monitor Windows las
+	  desconecta y conecta sin que nadie haya tocado nada.
 	"""
 
-	def __init__(self, al_cambiar) -> None:
+	def __init__(self, al_cambiar, con_pantallas=None, espera: float = 2.5) -> None:
+		import threading
+
 		self._al_cambiar = al_cambiar
+		self._con_pantallas = con_pantallas or (lambda: False)
+		self._espera = espera
 		self._enumerador = None
 		self._cliente = None
-		self._nombres: dict[str, str] = {}
+		self._puntos: dict[str, PuntoAudio] = {}
+		self._anunciado: dict[str, bool] = {}
+		self._candado = threading.Lock()
+		self._temporizador = None
+
+	def _leer_puntos(self) -> dict[str, PuntoAudio]:
+		utilidades, flujos, _roles, estados = _pycaw()
+		puntos = {}
+		for dispositivo in utilidades.GetAllDevices(flujos.eAll.value, estados.MASK_ALL.value):
+			factor = None
+			try:
+				factor = next((v for k, v in (dispositivo.properties or {}).items() if str(k).lower() == _CLAVE_FACTOR_FORMA), None)
+			except Exception:  # noqa: BLE001 - propiedades ilegibles: se trata como dispositivo normal
+				factor = None
+			estado = getattr(dispositivo.state, "value", dispositivo.state)
+			puntos[dispositivo.id] = PuntoAudio(dispositivo.FriendlyName or "", estado == ESTADO_ACTIVO, factor == FACTOR_PANTALLA)
+		return puntos
 
 	def iniciar(self) -> None:
 		from pycaw.callbacks import MMNotificationClient
 
-		utilidades, flujos, _roles, estados = _pycaw()
-		for dispositivo in utilidades.GetAllDevices(flujos.eAll.value, estados.MASK_ALL.value):
-			self._nombres[dispositivo.id] = dispositivo.FriendlyName or ""
+		utilidades, _flujos, _roles, _estados = _pycaw()
+		self._puntos = self._leer_puntos()
+		# Lo que hay al arrancar no se anuncia: es el punto de partida.
+		self._anunciado = resumir_por_nombre(self._puntos, True)
 		vigilante = self
 
 		class Cliente(MMNotificationClient):
 			def on_device_state_changed(self, device_id, new_state, new_state_id):
 				vigilante._estado(device_id, new_state_id)
 
+			def on_device_added(self, added_device_id):
+				vigilante._estado(added_device_id, None)
+
+			def on_device_removed(self, removed_device_id):
+				vigilante._estado(removed_device_id, 0)
+
 		self._cliente = Cliente()
 		self._enumerador = utilidades.GetDeviceEnumerator()
 		self._enumerador.RegisterEndpointNotificationCallback(self._cliente)
 
-	def _estado(self, identificador: str, estado: int) -> None:
-		nombre = self._nombres.get(identificador) or "Un dispositivo de audio"
+	def _estado(self, identificador: str, estado: int | None) -> None:
+		"""Anota el cambio y espera a que se calme antes de avisar."""
+		import threading
+
+		log.debug("Audio: el punto %s pasa al estado %s", identificador, estado)
+		with self._candado:
+			punto = self._puntos.get(identificador)
+			if punto is None or estado is None:
+				self._pendiente_releer = True
+			else:
+				punto.activo = estado == ESTADO_ACTIVO
+			if self._temporizador is not None:
+				self._temporizador.cancel()
+			self._temporizador = threading.Timer(self._espera, self._evaluar)
+			self._temporizador.daemon = True
+			self._temporizador.name = "avisos-audio"
+			self._temporizador.start()
+
+	def _evaluar(self) -> None:
+		"""Compara con lo último anunciado y avisa de lo que de verdad cambió."""
 		try:
-			if estado == 1:  # DEVICE_STATE_ACTIVE
-				self._al_cambiar(f"Conectado: {nombre}")
-			elif estado in (4, 8):  # NOTPRESENT, UNPLUGGED
-				self._al_cambiar(f"Desconectado: {nombre}")
+			if getattr(self, "_pendiente_releer", False):
+				self._pendiente_releer = False
+				try:
+					puntos = self._leer_puntos()
+				except Exception:  # noqa: BLE001
+					log.debug("No se pudo releer la lista de dispositivos de audio", exc_info=True)
+				else:
+					with self._candado:
+						self._puntos = puntos
+			with self._candado:
+				todos = resumir_por_nombre(self._puntos, True)
+				pantallas = {p.nombre for p in self._puntos.values() if p.pantalla}
+				avisos = cambios_de_conexion(self._anunciado, todos)
+				self._anunciado = todos
+			if not self._con_pantallas():
+				avisos = [a for a in avisos if a.split(": ", 1)[1] not in pantallas]
+			for aviso in avisos:
+				log.info("Audio: %s", aviso)
+			if avisos:
+				self._al_cambiar(". ".join(avisos))
 		except Exception:  # noqa: BLE001
 			log.exception("Error al avisar de un cambio de dispositivo")
 
 	def detener(self) -> None:
+		if self._temporizador is not None:
+			self._temporizador.cancel()
+			self._temporizador = None
 		if self._enumerador is not None and self._cliente is not None:
 			try:
 				self._enumerador.UnregisterEndpointNotificationCallback(self._cliente)

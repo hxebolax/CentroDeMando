@@ -31,6 +31,7 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Control+Alt+Windows+E: emoticonos.
 - Control+Alt+Windows+A: historial de notificaciones.
 - Control+Alt+Windows+U: decir la última notificación.
+- Control+Alt+Windows+Q: activar o desactivar No molestar.
 
 ## Globales: fragmentos, audio y sistema
 

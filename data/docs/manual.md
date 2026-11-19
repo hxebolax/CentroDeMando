@@ -74,11 +74,16 @@ Qué se dice de cada celda se elige en Opciones, pestaña Listas: número de fil
 - Volver al escritorio anterior: Control+Alt+Windows+Retroceso (alterna entre los dos últimos).
 - Elegir de una lista: Control+Alt+Windows+S. Escriba el número, la primera letra o parte del nombre en Filtrar (Alt+F), e Intro.
 
-Al llegar a un escritorio, Centro de Mando da el foco a la última ventana que usó en él y anuncia el escritorio.
+Al llegar a un escritorio, Centro de Mando da el foco a la última ventana que usó en él.
 
 Las teclas de Windows Control+Windows+Flecha derecha e izquierda se detienen en los extremos. En Opciones, Avanzado, **Hacer cíclicas Ctrl+Windows+Izquierda y Derecha** hace que también den la vuelta.
 
-NVDA ya anuncia el escritorio cuando se cambia con las teclas de Windows. Por eso, de fábrica, Centro de Mando no repite el anuncio de los cambios hechos fuera de él (Opciones, Anuncios, **Anunciar también los cambios hechos fuera de Centro de Mando**). Si con sus propias teclas oye el escritorio dos veces, desactive **Anunciar el escritorio al cambiar**.
+Con un lector de pantalla (NVDA, JAWS o Narrador), Windows ya dice el escritorio al que se llega, se cambie con las teclas de Windows o con las de Centro de Mando. Por eso, de fábrica, Centro de Mando no lo repite y se oye una sola vez. Sin lector de pantalla, lo dice él con la voz de Windows. Se elige en Opciones, Anuncios, **Anunciar el escritorio al cambiar**:
+
+- **Automático** (de fábrica): no repetir lo que ya dice Windows. Si además marca **Decir cuántas ventanas tiene**, tras el anuncio de Windows se dice solo «3 ventanas» o «Vacío».
+- **Solo los cambios hechos con Centro de Mando**, **Todos** o **Nunca**: para quien prefiera el anuncio propio (con el número, el total o las ventanas), aunque con lector se oiga dos veces.
+
+Control+Alt+Windows+I dice el escritorio actual en cualquier momento.
 
 ### Área de escritorios
 
@@ -191,7 +196,17 @@ En el menú Acción y en el menú contextual (tecla Aplicaciones): abrir la apli
 
 Windows no avisa a los programas de las notificaciones nuevas: Centro de Mando le pregunta cada pocos segundos (Opciones, Notificaciones). Así también se guardan las que llegan con «No molestar».
 
-NVDA ya lee las notificaciones cuando aparecen. Por eso **Anunciar las notificaciones nuevas por voz** viene desactivado; actívelo si quiere oírlas aunque esté con otro programa que no las lea.
+NVDA ya lee las notificaciones cuando aparecen. Por eso **Anunciar las notificaciones nuevas por voz** viene desactivado; actívelo si quiere oírlas aunque esté con otro programa que no las lea. Con **Anunciar solo las de estas aplicaciones** se dicen solo las de las aplicaciones que escriba (separadas por comas; basta parte del nombre: «whatsapp» vale para «WhatsApp Beta»); las demás se guardan en silencio.
+
+## No molestar
+
+Calla los avisos que llegan sin pedirlos: el anuncio de las notificaciones nuevas, los dispositivos de audio que se conectan y desconectan, y el aviso de cada copia. Las notificaciones se siguen guardando en el historial, las alarmas y temporizadores siguen sonando y Centro de Mando sigue respondiendo a sus teclas.
+
+- Control+Alt+Windows+Q lo activa o lo desactiva y lo dice. También en el menú de la bandeja (**No molestar**) y en el lanzador.
+- Mientras está activo, el icono de la bandeja lo dice: «Centro de Mando Escritorio 3. No molestar».
+- En Opciones, pestaña **No molestar**: activarlo cada día en un horario (por ejemplo de 23:00 a 08:00; cruza la medianoche sin problema) y las aplicaciones cuyas notificaciones se anuncian igualmente.
+
+Si está activo por horario, la tecla no lo quita: dice que está activo por horario y dónde cambiarlo.
 
 ## Fragmentos de texto
 
@@ -215,7 +230,7 @@ En el menú Acción y el contextual de esa lista:
 - **Cambiar la salida de la aplicación**: elija por qué dispositivo suena solo esa aplicación (por ejemplo, la música por los altavoces y el resto por los auriculares), o «La salida predeterminada» para volver a la normal. Es lo mismo que el Mezclador de volumen de Windows y Windows lo recuerda para la próxima vez. La aplicación tiene que estar sonando para poder cambiarla. Algunos programas eligen su propia salida (NVDA, juegos, programas de música profesional) y no hacen caso de esto.
 - **Solo esta aplicación**: silencia las demás; repítalo para que vuelvan a sonar todas.
 
-Al conectar o desconectar un dispositivo de audio se dice «Conectado» o «Desconectado» y su nombre (Opciones, Anuncios, para desactivarlo).
+Al conectar o desconectar un dispositivo de audio se dice «Conectado» o «Desconectado» y su nombre (Opciones, Anuncios, para desactivarlo). Se espera unos segundos a que el cambio se asiente: si un dispositivo se desconecta y se vuelve a conectar enseguida no se dice nada, y uno con varias entradas de audio con el mismo nombre avisa una sola vez. El audio de monitores y televisores (HDMI, DisplayPort) no avisa de fábrica, porque Windows lo desconecta y lo conecta cada vez que la pantalla reposa o despierta; actívelo en Opciones, Anuncios, **Avisar también del audio de monitores y televisores**.
 
 Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nombre; Control+Alt+Windows+Flecha arriba y abajo suben y bajan el volumen general; Control+Alt+Windows+M silencia o activa el micrófono. En Teclas globales hay además, sin tecla de fábrica, silenciar el sonido general y decir el estado del audio.
 
@@ -286,11 +301,12 @@ Herramientas, Opciones (Control+coma), con pestañas:
 
 - **General**: iniciar con Windows, arrancar oculto, icono en la bandeja, minimizar y cerrar a la bandeja, voz al arrancar y confirmar al eliminar escritorios.
 - **Cambio de escritorio**: cíclico, foco a la última ventana y animación.
-- **Anuncios**: qué se dice al cambiar de escritorio y con cuánto retraso.
+- **Anuncios**: cuándo se dice el escritorio al cambiar (automático, solo los propios, todos o nunca), qué se dice y con cuánto retraso, y los avisos de dispositivos de audio.
 - **Listas**: qué se dice al moverse por las columnas.
 - **Portapapeles**: guardar o no, máximo de elementos, caducidad en días, formatos que se guardan, tamaño de imagen, privacidad, programas excluidos, restaurar tras pegar, forma de pegar y anunciar cada copia.
 - **Emoticonos**: forma de insertar, tono de piel, mostrar el carácter y cuántos recientes se recuerdan.
-- **Notificaciones**: guardar o no, cada cuánto se consulta, anunciar las nuevas, marcar como leídas, aplicaciones ignoradas, máximo y días.
+- **Notificaciones**: guardar o no, cada cuánto se consulta, anunciar las nuevas (todas o solo las de algunas aplicaciones), marcar como leídas, aplicaciones ignoradas, máximo y días.
+- **No molestar**: activarlo ahora, horario diario y aplicaciones que se anuncian igualmente.
 - **Ventanas**: seguir a la ventana al moverla y aplicar las reglas al iniciar.
 - **Actualizaciones**: de dónde buscarlas y cada cuánto.
 - **Avanzado**: hacer cíclicas las teclas de Windows, sondeo de escritorios y nivel de registro.
@@ -299,7 +315,9 @@ Los cambios se aplican al momento.
 
 ## La bandeja del sistema
 
-Windows+B lleva a la bandeja. El lector dice el nombre del programa, el escritorio actual y, si las hay, las notificaciones sin leer. Intro muestra la ventana; la tecla Aplicaciones abre un menú con los escritorios, el historial del portapapeles, los emoticonos, el historial de notificaciones, las teclas globales, las opciones y Salir.
+Windows+B lleva a la bandeja. El lector dice el nombre del programa, el escritorio actual, «No molestar» si está activo y, si las hay, las notificaciones sin leer; por ejemplo «Centro de Mando Escritorio 3. 2 notificaciones sin leer». Intro muestra la ventana; la tecla Aplicaciones abre un menú con los escritorios, el historial del portapapeles, los emoticonos, el historial de notificaciones, No molestar, las teclas globales, las opciones y Salir.
+
+Windows 11 recuerda para siempre el primer texto que mostró el icono y lo antepone a lo demás. La versión 1.0.0 mostraba un momento «Conectando con los escritorios virtuales» y Windows se quedó con ese texto; desde la 1.1.0 Centro de Mando lo corrige solo al arrancar.
 
 Si la bandeja oculta el icono, Control+Alt+Windows+G muestra la ventana.
 

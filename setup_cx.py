@@ -89,6 +89,31 @@ def archivos_de_data() -> list[tuple[str, str]]:
 	return resultado
 
 
+def corregir_abi3t(destino: Path) -> list[Path]:
+	"""Pone el ``python3t.dll`` correcto junto al ejecutable y en ``lib``.
+
+	Python 3.15 trae dos ``python3t.dll``: el de la raíz reenvía a
+	``python315t.dll`` (el intérprete sin GIL) y el de ``abi3t-compat`` a
+	``python315.dll`` (el normal). cx_Freeze copia el de la raíz, y las
+	extensiones ``abi3t`` como ``cryptography`` (la que verifica la firma de
+	las actualizaciones) fallan con «No se puede encontrar el módulo
+	especificado» porque ``python315t.dll`` no se distribuye.
+	"""
+	import sysconfig
+
+	if sysconfig.get_config_var("Py_GIL_DISABLED"):
+		return []
+	origen = Path(sys.base_prefix) / "abi3t-compat" / "python3t.dll"
+	if not origen.is_file():
+		return []
+	corregidos = []
+	for objetivo in (destino / "python3t.dll", destino / "lib" / "python3t.dll"):
+		if objetivo.is_file():
+			shutil.copy2(origen, objetivo)
+			corregidos.append(objetivo)
+	return corregidos
+
+
 def _disponible(modulo: str) -> bool:
 	import importlib.util
 
@@ -130,3 +155,6 @@ if __name__ == "__main__":
 			)
 		],
 	)
+	if DESTINO.is_dir():
+		for corregido in corregir_abi3t(DESTINO):
+			print(f"python3t.dll corregido (abi3t-compat): {corregido}")

@@ -356,6 +356,21 @@ def serializar_canonico(manifiesto: dict) -> bytes:
 	return json.dumps(datos, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
 
 
+def componente_firma_disponible() -> bool:
+	"""``True`` si se puede cargar lo que verifica las firmas (``cryptography``).
+
+	Lo usa ``--comprobar-arranque``: una compilación que no pudiera cargarlo
+	no se podría actualizar nunca (pasó en la 1.0.0 por un ``python3t.dll``
+	equivocado).
+	"""
+	try:
+		from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey  # noqa: F401
+	except ImportError:
+		log.exception("No se puede cargar cryptography: las actualizaciones no podrán verificarse")
+		return False
+	return True
+
+
 def verificar_firma(manifiesto: dict, claves_publicas: tuple[str, ...] | list[str]) -> None:
 	"""Comprueba la firma Ed25519 del manifiesto con alguna de las claves públicas.
 

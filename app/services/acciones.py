@@ -277,6 +277,13 @@ ACCIONES: list[Accion] = [
 	),
 	Accion("nuevo_temporizador", "Nuevo temporizador", "Abre el cuadro para poner un temporizador.", CATEGORIA_SISTEMA, ""),
 	Accion("nueva_alarma", "Nueva alarma o recordatorio", "Abre el cuadro para poner una alarma o un recordatorio a una hora.", CATEGORIA_SISTEMA, ""),
+	Accion(
+		"no_molestar",
+		"Activar o desactivar No molestar",
+		"Calla los avisos automáticos: notificaciones nuevas, dispositivos de audio y copias. Las alarmas siguen sonando.",
+		CATEGORIA_NOTIFICACIONES,
+		"Ctrl+Alt+Win+Q",
+	),
 	Accion("decir_temporizadores", "Decir los temporizadores", "Dice cuánto les queda a los temporizadores y alarmas en marcha.", CATEGORIA_SISTEMA, ""),
 	Accion("bloquear_equipo", "Bloquear el equipo", "Bloquea la sesión de Windows.", CATEGORIA_SISTEMA, ""),
 	Accion("apagar_pantalla", "Apagar la pantalla", "Apaga el monitor; se enciende al tocar el teclado o el ratón.", CATEGORIA_SISTEMA, ""),

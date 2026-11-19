@@ -23,7 +23,8 @@ compilada no tiene consola donde ver nada).
 Argumentos:
 
 - ``--comprobar-arranque``: arranca sin mostrar la ventana y sale con código
-  0 si todo fue bien. Sirve para pruebas automáticas y para comprobar el
+  0 si todo fue bien (3 si no carga el verificador de firmas de las
+  actualizaciones). Sirve para pruebas automáticas y para comprobar el
   ``.exe`` recién compilado.
 - ``--inicio-windows``: lo pone el inicio automático; arranca oculto en la
   bandeja si así está configurado.
@@ -212,6 +213,12 @@ def _principal(argumentos: list[str]) -> int:
 	registro.establecer_aviso_usuario(None)
 	instancia.liberar()
 	log.info("Cierre normal.")
+	registro.cerrar_sesion_limpia()
+	if comprobar:
+		from app.services import actualizador
+
+		if not actualizador.componente_firma_disponible():
+			return 3
 	return 0
 
 

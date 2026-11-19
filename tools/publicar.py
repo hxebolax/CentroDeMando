@@ -66,6 +66,11 @@ def comprobar_build(version: str) -> None:
 	personales = sorted(p.name for p in (BUILD / "data").iterdir() if p.is_dir() and p.name in PROHIBIDO_EN_DATA)
 	if personales:
 		raise SystemExit(f"La compilación lleva datos personales en data: {', '.join(personales)}. Recompile desde cero.")
+	# cx_Freeze copia el python3t.dll que reenvía al intérprete sin GIL; así
+	# cryptography no carga y las instalaciones no pueden verificar firmas.
+	for dll in (BUILD / "python3t.dll", BUILD / "lib" / "python3t.dll"):
+		if dll.is_file() and re.search(rb"python3\d+t\.Py", dll.read_bytes()):
+			raise SystemExit(f"{dll} reenvía al Python sin GIL: cryptography no cargará. Compile con setup_cx.py (lo corrige).")
 	versiones = list((BUILD / "lib").rglob("version.py"))
 	if not any(f'"{version}"' in v.read_text(encoding="utf-8", errors="ignore") for v in versiones if "core" in v.parts):
 		print("Aviso: no se pudo confirmar la versión dentro de la compilación (puede estar en library.zip).")
