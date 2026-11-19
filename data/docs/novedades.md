@@ -1,5 +1,12 @@
 # Novedades de Centro de Mando
 
+## 2.4.0
+
+- **Salida de audio por aplicación**, como en el Mezclador de volumen de Windows: en el área de Audio, «Cambiar la salida de la aplicación», y con una tecla global (sin asignar de fábrica) la aplicación activa pasa a la siguiente salida.
+- **Solo la aplicación activa** (Control+Alt+Mayúsculas+Windows+Retroceso): silencia todo lo demás salvo el lector de pantalla; la misma tecla devuelve el sonido a todas.
+- **Aviso al conectar o desconectar** auriculares, altavoces o dispositivos Bluetooth (se puede desactivar en Opciones, Anuncios).
+- La lista de aplicaciones con sonido muestra ahora las de **todas las salidas**, no solo las de la predeterminada, con la columna «Suena por».
+
 ## 2.3.0
 
 - **Sonido de la aplicación enfocada**: Control+Alt+Mayúsculas+Windows+Flecha arriba y abajo suben y bajan el volumen solo del programa que tiene el foco; Control+Alt+Mayúsculas+Windows+Fin lo silencia y Control+Alt+Mayúsculas+Windows+Inicio dice su volumen. Funciona también con los navegadores, que suenan desde procesos internos.

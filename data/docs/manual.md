@@ -208,7 +208,14 @@ Cada fragmento tiene nombre, abreviatura (opcional), categoría y texto. El text
 
 - **Dispositivos de salida** (Alt+D): Intro pone el elegido como salida predeterminada.
 - **Volumen general** (Alt+G): deslizador de 0 a 100.
-- **Aplicaciones con sonido** (Alt+S): Más y Menos (o Control+flechas arriba y abajo) cambian su volumen de 5 en 5; Espacio la silencia.
+- **Aplicaciones con sonido** (Alt+S): las de todas las salidas, con su volumen, si está silenciada y por qué dispositivo suena. Más y Menos (o Control+flechas arriba y abajo) cambian su volumen de 5 en 5; Espacio la silencia.
+
+En el menú Acción y el contextual de esa lista:
+
+- **Cambiar la salida de la aplicación**: elija por qué dispositivo suena solo esa aplicación (por ejemplo, la música por los altavoces y el resto por los auriculares), o «La salida predeterminada» para volver a la normal. Es lo mismo que el Mezclador de volumen de Windows y Windows lo recuerda para la próxima vez. La aplicación tiene que estar sonando para poder cambiarla. Algunos programas eligen su propia salida (NVDA, juegos, programas de música profesional) y no hacen caso de esto.
+- **Solo esta aplicación**: silencia las demás; repítalo para que vuelvan a sonar todas.
+
+Al conectar o desconectar un dispositivo de audio se dice «Conectado» o «Desconectado» y su nombre (Opciones, Anuncios, para desactivarlo).
 
 Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nombre; Control+Alt+Windows+Flecha arriba y abajo suben y bajan el volumen general; Control+Alt+Windows+M silencia o activa el micrófono. En Teclas globales hay además, sin tecla de fábrica, silenciar el sonido general y decir el estado del audio.
 
@@ -219,6 +226,8 @@ Sin abrir nada, desde el programa que está usando:
 - Control+Alt+Mayúsculas+Windows+Flecha arriba y abajo: subir y bajar de 5 en 5 solo su volumen.
 - Control+Alt+Mayúsculas+Windows+Fin: silenciarlo o devolverle el sonido.
 - Control+Alt+Mayúsculas+Windows+Inicio: decir su volumen.
+- Control+Alt+Mayúsculas+Windows+Retroceso: que solo suene ella (el lector de pantalla nunca se silencia); otra vez, vuelven a sonar todas.
+- Sin tecla de fábrica, «Pasar la aplicación activa a la siguiente salida»: cada pulsación la lleva a otro dispositivo y, tras el último, a la salida predeterminada.
 
 Los navegadores (Firefox, Chrome, Edge) y muchas aplicaciones suenan desde procesos internos: Centro de Mando los reconoce como parte del mismo programa. Si el programa no está sonando, lo dice.
 

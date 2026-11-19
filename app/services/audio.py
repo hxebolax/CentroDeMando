@@ -31,6 +31,7 @@ class Sesion:
 	pid: int
 	volumen: int  # 0-100
 	silenciada: bool
+	dispositivo: str = ""  # id del dispositivo por el que suena
 
 
 class ErrorAudio(Exception):
@@ -124,32 +125,60 @@ def alternar_microfono() -> bool:
 	return nuevo
 
 
+def _todas_las_sesiones():
+	"""(id del dispositivo, AudioSession de pycaw) de todas las salidas activas.
+
+	``AudioUtilities.GetAllSessions`` solo mira el dispositivo predeterminado: una
+	aplicación que sonara por otro no aparecería.
+	"""
+	from comtypes import CLSCTX_ALL
+	from pycaw.api.audiopolicy import IAudioSessionControl2, IAudioSessionManager2
+	from pycaw.utils import AudioSession
+
+	utilidades, flujos, _roles, estados = _pycaw()
+	coleccion = utilidades.GetDeviceEnumerator().EnumAudioEndpoints(flujos.eRender.value, estados.ACTIVE.value)
+	for indice in range(coleccion.GetCount()):
+		dispositivo = coleccion.Item(indice)
+		try:
+			gestor = dispositivo.Activate(IAudioSessionManager2._iid_, CLSCTX_ALL, None).QueryInterface(IAudioSessionManager2)
+			enumerador = gestor.GetSessionEnumerator()
+			identificador = dispositivo.GetId()
+		except Exception:  # noqa: BLE001 - dispositivo que se acaba de desconectar
+			log.debug("Dispositivo de audio ilegible", exc_info=True)
+			continue
+		for posicion in range(enumerador.GetCount()):
+			control = enumerador.GetSession(posicion)
+			if control is not None:
+				yield identificador, AudioSession(control.QueryInterface(IAudioSessionControl2))
+
+
+def _clave(sesion) -> str:
+	return str(sesion.InstanceIdentifier or sesion.Identifier or sesion.ProcessId)
+
+
 def sesiones() -> list[Sesion]:
-	utilidades, _f, _r, _e = _pycaw()
-	resultado = []
-	for sesion in utilidades.GetAllSessions():
+	"""Aplicaciones con sonido en cualquier salida (sin repetir la misma sesión)."""
+	import psutil
+
+	resultado: dict[str, Sesion] = {}
+	for dispositivo, sesion in _todas_las_sesiones():
 		try:
 			proceso = sesion.Process
 			nombre = proceso.name() if proceso else "Sonidos del sistema"
 			simple = sesion.SimpleAudioVolume
-			resultado.append(
-				Sesion(
-					clave=str(sesion.InstanceIdentifier or sesion.Identifier or sesion.ProcessId),
-					nombre=nombre,
-					pid=int(sesion.ProcessId or 0),
-					volumen=round(simple.GetMasterVolume() * 100),
-					silenciada=bool(simple.GetMute()),
-				)
+			clave = _clave(sesion)
+			resultado.setdefault(
+				clave,
+				Sesion(clave, nombre, int(sesion.ProcessId or 0), round(simple.GetMasterVolume() * 100), bool(simple.GetMute()), dispositivo),
 			)
-		except Exception:  # noqa: BLE001 - la aplicación pudo cerrarse
+		except (psutil.Error, OSError, Exception):  # noqa: BLE001 - la aplicación pudo cerrarse
 			log.debug("Sesión de audio ilegible", exc_info=True)
-	return resultado
+	return list(resultado.values())
 
 
 def _sesion(clave: str):
-	utilidades, _f, _r, _e = _pycaw()
-	for sesion in utilidades.GetAllSessions():
-		if str(sesion.InstanceIdentifier or sesion.Identifier or sesion.ProcessId) == clave:
+	for _dispositivo, sesion in _todas_las_sesiones():
+		if _clave(sesion) == clave:
 			return sesion
 	raise ErrorAudio("Esa aplicación ya no tiene sonido.")
 
@@ -259,9 +288,227 @@ def alternar_silencio_ventana(hwnd: int) -> str:
 	return f"{_programa_de(hwnd)} " + ("silenciada" if silenciar else "con sonido")
 
 
+def siguiente_salida_de_ventana(hwnd: int) -> str:
+	"""Pasa la aplicación de la ventana a la siguiente salida (la última vuelta deja la predeterminada)."""
+	propias = [s for s in sesiones_de_ventana(hwnd) if s.pid]
+	if not propias:
+		raise ErrorAudio(f"{_programa_de(hwnd)} no está reproduciendo sonido.")
+	salidas = dispositivos_salida()
+	politica = _obtener_politica()
+	actual = politica.leer(propias[0].pid) or ""
+	opciones = ["", *(d.id for d in salidas)]
+	siguiente = opciones[(opciones.index(actual) + 1) % len(opciones)] if actual in opciones else ""
+	for pid in {s.pid for s in propias}:
+		politica.poner(pid, siguiente)
+	nombre = next((d.nombre for d in salidas if d.id == siguiente), "la salida predeterminada")
+	return f"{_programa_de(hwnd)} suena por {nombre}"
+
+
 def decir_volumen_ventana(hwnd: int) -> str:
 	propias = sesiones_de_ventana(hwnd)
 	if not propias:
 		return f"{_programa_de(hwnd)} no está reproduciendo sonido."
 	sesion = propias[0]
 	return f"{_programa_de(hwnd)}: {sesion.volumen} %" + (", silenciada" if sesion.silenciada else "")
+
+
+
+# ── Salida por aplicación (como el Mezclador de volumen de Windows) ──────────
+
+_IID_POLITICA = ("ab3d4648-e242-459f-b02f-541c70306324", "2a59116d-6c4f-45e0-a74f-707e3fef9258")
+_PREFIJO = "\\\\?\\SWD#MMDEVAPI#"
+_SUFIJO_SALIDA = "#{e6327cad-dcec-4949-ae8a-991e976a79d2}"
+_SIN_SESION = 0x80070057
+
+
+class _PoliticaPorAplicacion:
+	"""Interfaz no documentada ``IAudioPolicyConfigFactory`` (la usan EarTrumpet y SoundSwitch).
+
+	Se pide con el IID de cada versión de Windows: si ninguno encaja, se
+	rechaza con ``ErrorAudio`` en lugar de arriesgarse a llamar a una tabla de
+	métodos equivocada (eso tumbaría el proceso). Usar siempre desde el hilo
+	principal (COM inicializado por wx).
+	"""
+
+	def __init__(self) -> None:
+		import ctypes
+		import uuid
+
+		self._ctypes = ctypes
+		combase = ctypes.windll.combase
+		combase.WindowsCreateString.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+		combase.WindowsDeleteString.argtypes = [ctypes.c_void_p]
+		combase.WindowsGetStringRawBuffer.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+		combase.WindowsGetStringRawBuffer.restype = ctypes.c_wchar_p
+		self._combase = combase
+
+		class GUID(ctypes.Structure):
+			_fields_ = [("a", ctypes.c_ulong), ("b", ctypes.c_ushort), ("c", ctypes.c_ushort), ("d", ctypes.c_ubyte * 8)]
+
+		combase.RoGetActivationFactory.argtypes = [ctypes.c_void_p, ctypes.POINTER(GUID), ctypes.POINTER(ctypes.c_void_p)]
+		nombre = self._hstring("Windows.Media.Internal.AudioPolicyConfig")
+		self._fabrica = ctypes.c_void_p()
+		try:
+			for iid in _IID_POLITICA:
+				u = uuid.UUID(iid)
+				guid = GUID(u.time_low, u.time_mid, u.time_hi_version, (ctypes.c_ubyte * 8)(*u.bytes[8:]))
+				if combase.RoGetActivationFactory(nombre, ctypes.byref(guid), ctypes.byref(self._fabrica)) == 0:
+					break
+			else:
+				raise ErrorAudio("Esta versión de Windows no permite elegir la salida de cada aplicación.")
+		finally:
+			combase.WindowsDeleteString(nombre)
+		tabla = ctypes.cast(self._fabrica, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+		hresult = ctypes.c_long
+		self._poner = ctypes.WINFUNCTYPE(hresult, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.c_void_p)(tabla[25])
+		self._leer = ctypes.WINFUNCTYPE(hresult, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p))(tabla[26])
+
+	def _hstring(self, texto: str):
+		manejador = self._ctypes.c_void_p()
+		self._combase.WindowsCreateString(texto, len(texto), self._ctypes.byref(manejador))
+		return manejador
+
+	def leer(self, pid: int) -> str | None:
+		"""Id del dispositivo asignado al proceso; "" = el predeterminado; ``None`` = sin sesión."""
+		salida = self._ctypes.c_void_p()
+		resultado = self._leer(self._fabrica, pid, 0, 1, self._ctypes.byref(salida)) & 0xFFFFFFFF
+		if resultado == _SIN_SESION:
+			return None
+		if resultado:
+			raise ErrorAudio(f"Windows no dio la salida de esa aplicación (código {resultado:#x}).")
+		texto = self._combase.WindowsGetStringRawBuffer(salida, None) or ""
+		self._combase.WindowsDeleteString(salida)
+		return texto.removeprefix(_PREFIJO).removesuffix(_SUFIJO_SALIDA)
+
+	def poner(self, pid: int, dispositivo: str) -> None:
+		"""Asigna la salida (multimedia y consola, como EarTrumpet); ``""`` vuelve al predeterminado."""
+		manejador = self._hstring(_PREFIJO + dispositivo + _SUFIJO_SALIDA) if dispositivo else None
+		try:
+			for rol in (1, 0):
+				resultado = self._poner(self._fabrica, pid, 0, rol, manejador) & 0xFFFFFFFF
+				if resultado == _SIN_SESION:
+					raise ErrorAudio("Esa aplicación no tiene el sonido abierto ahora mismo.")
+				if resultado:
+					raise ErrorAudio(f"Windows no dejó cambiar la salida (código {resultado:#x}).")
+		finally:
+			if manejador:
+				self._combase.WindowsDeleteString(manejador)
+
+
+_politica: _PoliticaPorAplicacion | None = None
+
+
+def _obtener_politica() -> _PoliticaPorAplicacion:
+	global _politica
+	if _politica is None:
+		_politica = _PoliticaPorAplicacion()
+	return _politica
+
+
+def salida_de_sesion(sesion: Sesion) -> str:
+	"""Nombre de la salida asignada a la aplicación o «predeterminada»."""
+	try:
+		asignada = _obtener_politica().leer(sesion.pid)
+	except ErrorAudio:
+		return ""
+	if not asignada:
+		return "predeterminada"
+	return next((d.nombre for d in dispositivos_salida() if d.id == asignada), "otra")
+
+
+def poner_salida_de_sesion(sesion: Sesion, dispositivo: Dispositivo | None) -> None:
+	"""Hace que la aplicación suene por ``dispositivo`` (``None`` = la salida predeterminada)."""
+	_obtener_politica().poner(sesion.pid, dispositivo.id if dispositivo else "")
+
+
+# ── Solo esta aplicación ─────────────────────────────────────────────────────
+
+# Nunca se silencian los lectores de pantalla: el usuario se quedaría sin voz.
+LECTORES = {"nvda.exe", "nvda_slave.exe", "jfw.exe", "narrator.exe", "zdsrv.exe", "zt.exe", "sapisvr.exe"}
+_silenciadas_por_solo: list[str] = []
+
+
+def solo_esta_aplicacion(hwnd: int) -> str:
+	"""Silencia todo salvo el programa de la ventana (y el lector); la segunda vez lo restaura."""
+	global _silenciadas_por_solo
+	if _silenciadas_por_solo:
+		for clave in _silenciadas_por_solo:
+			try:
+				simple = _sesion(clave).SimpleAudioVolume
+				simple.SetMute(False, None)
+			except ErrorAudio:
+				continue
+		_silenciadas_por_solo = []
+		return "Vuelven a sonar todas las aplicaciones"
+	propias = {s.clave for s in sesiones_de_ventana(hwnd)}
+	if not propias:
+		raise ErrorAudio(f"{_programa_de(hwnd)} no está reproduciendo sonido.")
+	return solo_estas(propias, _programa_de(hwnd))
+
+
+def solo_estas(propias: set[str], nombre: str) -> str:
+	"""Silencia todas las sesiones salvo ``propias`` y los lectores de pantalla."""
+	global _silenciadas_por_solo
+	if _silenciadas_por_solo:
+		return solo_esta_aplicacion(0)
+	for sesion in sesiones():
+		if sesion.clave in propias or sesion.silenciada or sesion.nombre.casefold() in LECTORES or not sesion.pid:
+			continue
+		try:
+			_sesion(sesion.clave).SimpleAudioVolume.SetMute(True, None)
+			_silenciadas_por_solo.append(sesion.clave)
+		except ErrorAudio:
+			continue
+	return f"Solo suena {nombre}. Repita la orden para volver a oír las demás."
+
+
+# ── Avisos de dispositivos conectados y desconectados ────────────────────────
+
+
+class VigilanteDispositivos:
+	"""Avisa con ``al_cambiar(texto)`` al conectar o desconectar un dispositivo de audio.
+
+	Windows llama desde sus propios hilos: ``al_cambiar`` debe pasar a la
+	interfaz con ``wx.CallAfter``. Los dispositivos Bluetooth llegan como
+	cambios de estado, no como «añadido».
+	"""
+
+	def __init__(self, al_cambiar) -> None:
+		self._al_cambiar = al_cambiar
+		self._enumerador = None
+		self._cliente = None
+		self._nombres: dict[str, str] = {}
+
+	def iniciar(self) -> None:
+		from pycaw.callbacks import MMNotificationClient
+
+		utilidades, flujos, _roles, estados = _pycaw()
+		for dispositivo in utilidades.GetAllDevices(flujos.eAll.value, estados.MASK_ALL.value):
+			self._nombres[dispositivo.id] = dispositivo.FriendlyName or ""
+		vigilante = self
+
+		class Cliente(MMNotificationClient):
+			def on_device_state_changed(self, device_id, new_state, new_state_id):
+				vigilante._estado(device_id, new_state_id)
+
+		self._cliente = Cliente()
+		self._enumerador = utilidades.GetDeviceEnumerator()
+		self._enumerador.RegisterEndpointNotificationCallback(self._cliente)
+
+	def _estado(self, identificador: str, estado: int) -> None:
+		nombre = self._nombres.get(identificador) or "Un dispositivo de audio"
+		try:
+			if estado == 1:  # DEVICE_STATE_ACTIVE
+				self._al_cambiar(f"Conectado: {nombre}")
+			elif estado in (4, 8):  # NOTPRESENT, UNPLUGGED
+				self._al_cambiar(f"Desconectado: {nombre}")
+		except Exception:  # noqa: BLE001
+			log.exception("Error al avisar de un cambio de dispositivo")
+
+	def detener(self) -> None:
+		if self._enumerador is not None and self._cliente is not None:
+			try:
+				self._enumerador.UnregisterEndpointNotificationCallback(self._cliente)
+			except Exception:  # noqa: BLE001
+				log.debug("No se pudo quitar el aviso de dispositivos", exc_info=True)
+		self._enumerador = self._cliente = None

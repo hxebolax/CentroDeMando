@@ -67,6 +67,8 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"decir_total": False,
 		"decir_ventanas": False,
 		"tono": False,
+		# Decir «Conectado: Auriculares» o «Desconectado: ...» al enchufar o quitar un dispositivo de audio.
+		"dispositivos_audio": True,
 		# Espera antes de hablar: así el lector anuncia primero la ventana enfocada
 		# y nuestro aviso no queda cortado por el cambio de foco.
 		"retraso_ms": 150,

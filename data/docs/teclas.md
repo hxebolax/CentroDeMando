@@ -46,6 +46,8 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Control+Alt+Mayúsculas+Windows+Flecha arriba y abajo: subir y bajar su volumen.
 - Control+Alt+Mayúsculas+Windows+Fin: silenciarla o activarla.
 - Control+Alt+Mayúsculas+Windows+Inicio: decir su volumen.
+- Control+Alt+Mayúsculas+Windows+Retroceso: que solo suene ella; otra vez, todas.
+- Sin tecla de fábrica: pasarla a la siguiente salida de audio.
 
 ## Globales: ventanas
 

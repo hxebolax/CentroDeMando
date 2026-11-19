@@ -61,7 +61,7 @@ class AreaAudio(wx.Panel):
 		self.sesiones = listas.crear_lista(
 			self,
 			_("Aplicaciones con sonido"),
-			[(_("Aplicación"), self.FromDIP(300)), (_("Volumen"), self.FromDIP(100)), (_("Estado"), self.FromDIP(140))],
+			[(_("Aplicación"), self.FromDIP(260)), (_("Volumen"), self.FromDIP(90)), (_("Estado"), self.FromDIP(120)), (_("Suena por"), self.FromDIP(260))],
 			_("Más y menos, o Control+flechas arriba y abajo, cambian el volumen de la aplicación; Espacio la silencia."),
 		)
 		sizer.Add(etiqueta, 0, wx.LEFT | wx.RIGHT, 8)
@@ -83,6 +83,7 @@ class AreaAudio(wx.Panel):
 		except Exception:  # noqa: BLE001
 			log.exception("No se pudo leer el audio")
 			return
+		nombres = {d.id: d.nombre for d in self._dispositivos}
 		actualizar_lista(
 			self.dispositivos,
 			[(d.id, (d.nombre, _("predeterminado") if d.predeterminado else "")) for d in self._dispositivos],
@@ -93,7 +94,10 @@ class AreaAudio(wx.Panel):
 		self.volumen.SetHelpText(_("Volumen general: {v} %{s}.").format(v=volumen, s=_(", silenciado") if silencio else ""))
 		actualizar_lista(
 			self.sesiones,
-			[(s.clave, (s.nombre, f"{s.volumen} %", _("silenciada") if s.silenciada else "")) for s in self._sesiones],
+			[
+				(s.clave, (s.nombre, f"{s.volumen} %", _("silenciada") if s.silenciada else "", nombres.get(s.dispositivo, "")))
+				for s in self._sesiones
+			],
 			self._claves_sesiones,
 		)
 
@@ -145,6 +149,30 @@ class AreaAudio(wx.Panel):
 			self.controlador.hablar((_("{a} silenciada") if silenciada else _("{a} con sonido")).format(a=sesion.nombre), True)
 			self.refrescar()
 
+	def cambiar_salida(self) -> None:
+		sesion = self._sesion()
+		if sesion is None or not sesion.pid:
+			self.controlador.hablar(_("Elija una aplicación de la lista."), True)
+			return
+		opciones = [_("La salida predeterminada"), *(d.nombre for d in self._dispositivos)]
+		with wx.SingleChoiceDialog(self, _("Salida por la que suena {a}:").format(a=sesion.nombre), _("Salida de la aplicación"), opciones) as dialogo:
+			if dialogo.ShowModal() != wx.ID_OK:
+				return
+			elegido = dialogo.GetSelection()
+		dispositivo = self._dispositivos[elegido - 1] if elegido > 0 else None
+		if self._intentar(audio.poner_salida_de_sesion, sesion, dispositivo) is None:
+			self.controlador.hablar(_("{a} suena por {d}").format(a=sesion.nombre, d=opciones[elegido]), True)
+			wx.CallLater(400, self.refrescar)
+
+	def solo_esta(self) -> None:
+		sesion = self._sesion()
+		if sesion is None:
+			return
+		mensaje = self._intentar(audio.solo_estas, {s.clave for s in self._sesiones if s.nombre == sesion.nombre}, sesion.nombre)
+		if mensaje:
+			self.controlador.hablar(mensaje, True)
+			self.refrescar()
+
 	def acciones(self) -> list:
 		hay_dispositivo = self._dispositivo() is not None
 		hay_sesion = self._sesion() is not None
@@ -155,6 +183,8 @@ class AreaAudio(wx.Panel):
 			(_("&Subir el volumen de la aplicación (Más)"), lambda: self.volumen_aplicacion(PASO), hay_sesion),
 			(_("&Bajar el volumen de la aplicación (Menos)"), lambda: self.volumen_aplicacion(-PASO), hay_sesion),
 			(_("Si&lenciar o activar la aplicación (Espacio)"), self.silenciar_aplicacion, hay_sesion),
+			(_("Cambiar la sali&da de la aplicación..."), self.cambiar_salida, hay_sesion),
+			(_("Solo es&ta aplicación (otra vez: que suenen todas)"), self.solo_esta, hay_sesion),
 			None,
 			(_("Silenciar o activar el sonido &general"), self.controlador.silenciar_general, True),
 			(_("Silenciar o activar el &micrófono"), self.controlador.silenciar_microfono, True),

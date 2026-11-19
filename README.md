@@ -2,7 +2,7 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 2.3.0
+- Versión: 2.4.0
 - Autor: Héctor J. Benítez Corredera
 - Plataforma: Windows 10 y 11 de 64 bits
 - Idioma: español
@@ -47,7 +47,8 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 **Audio**
 
 - Cambiar la salida predeterminada con una tecla y oír su nombre, volumen general, volumen y silencio por aplicación y micrófono.
-- Volumen y silencio **de la aplicación enfocada** con teclas globales, también en navegadores.
+- Volumen y silencio **de la aplicación enfocada** con teclas globales, también en navegadores; «solo esta aplicación» sin silenciar nunca el lector.
+- **Salida de audio por aplicación** (como el Mezclador de volumen de Windows) y aviso al conectar o desconectar dispositivos.
 
 **Sistema**
 

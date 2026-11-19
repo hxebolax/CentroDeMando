@@ -140,3 +140,33 @@ def test_sesiones_de_la_ventana_enfocada(monkeypatch):
 	for hwnd, pid, esperado in ((10, 500, ["f"]), (11, 1, []), (12, 700, ["w"])):
 		monkeypatch.setattr(audio, "_pid_real", lambda h, p=pid: p)
 		assert [s.clave for s in audio.sesiones_de_ventana(hwnd)] == esperado
+
+
+def test_solo_esta_aplicacion_nunca_silencia_el_lector(monkeypatch):
+	silencio: dict[str, bool] = {}
+
+	class Simple:
+		def __init__(self, clave):
+			self.clave = clave
+
+		def SetMute(self, valor, _contexto):  # noqa: N802 - API de pycaw
+			silencio[self.clave] = valor
+
+	class SesionCom:
+		def __init__(self, clave):
+			self.SimpleAudioVolume = Simple(clave)
+
+	lista = [
+		audio.Sesion("f", "firefox.exe", 1, 100, False),
+		audio.Sesion("n", "nvda.exe", 2, 100, False),
+		audio.Sesion("t", "thunderbird.exe", 3, 100, False),
+		audio.Sesion("x", "musica.exe", 4, 100, True),
+	]
+	monkeypatch.setattr(audio, "sesiones", lambda: lista)
+	monkeypatch.setattr(audio, "_sesion", lambda clave: SesionCom(clave))
+	monkeypatch.setattr(audio, "_silenciadas_por_solo", [])
+	mensaje = audio.solo_estas({"f"}, "firefox")
+	assert silencio == {"t": True}, "ni la propia, ni el lector, ni la que ya estaba silenciada"
+	assert "firefox" in mensaje
+	audio.solo_estas({"f"}, "firefox")
+	assert silencio == {"t": False}, "la segunda vez se restaura lo que se silenció"

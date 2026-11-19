@@ -127,6 +127,11 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 			Opcion(
 				"anuncios.decir_ventanas", "Decir cuántas &ventanas tiene", "Añade cuántas ventanas hay en el escritorio al que se llega."
 			),
+			Opcion(
+				"anuncios.dispositivos_audio",
+				"Avisar al conectar o desconectar dispositivos de au&dio",
+				"Dice «Conectado» o «Desconectado» y el nombre del dispositivo (auriculares, altavoces Bluetooth...).",
+			),
 			Opcion("anuncios.tono", "T&ono distinto para cada escritorio", "Un pitido más agudo cuanto mayor es el número del escritorio."),
 			Opcion(
 				"anuncios.retraso_ms",

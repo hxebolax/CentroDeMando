@@ -126,6 +126,7 @@ class Controlador:
 		self.temporizadores.al_vencer = lambda t: wx.CallAfter(self._al_vencer_temporizador, t)
 		self.temporizadores.al_cambiar = lambda: wx.CallAfter(self._al_cambiar_temporizadores)
 		self.temporizadores.iniciar()
+		self._iniciar_vigilante_audio()
 		try:
 			self.notificaciones.iniciar()
 		except Exception:  # noqa: BLE001 - sin notificaciones, el resto sigue funcionando
@@ -147,6 +148,8 @@ class Controlador:
 		self.notificaciones.detener()
 		if getattr(self, "_temporizadores", None) is not None:
 			self._temporizadores.detener()
+		if getattr(self, "_vigilante_audio", None) is not None:
+			self._vigilante_audio.detener()
 
 	# ── Preferencias ────────────────────────────────────────────────────────
 
@@ -382,7 +385,7 @@ class Controlador:
 				"decir_audio": self.decir_audio,
 			}[accion]
 			wx.CallAfter(metodo)
-		elif accion in ("audio_app_subir", "audio_app_bajar", "audio_app_silenciar", "audio_app_decir"):
+		elif accion in ("audio_app_subir", "audio_app_bajar", "audio_app_silenciar", "audio_app_decir", "audio_solo_app", "audio_app_salida"):
 			# La ventana se mira AHORA, en el hilo de las teclas, antes de que cambie el foco.
 			wx.CallAfter(self.audio_aplicacion_activa, accion, w32.ventana_activa())
 		elif accion == "decir_estado_sistema":
@@ -661,7 +664,7 @@ class Controlador:
 		"""Volumen solo del programa que tiene el foco."""
 		from app.services import audio
 
-		if not hwnd or w32.pid(hwnd) == os.getpid():
+		if (not hwnd or w32.pid(hwnd) == os.getpid()) and not (accion == "audio_solo_app" and audio._silenciadas_por_solo):
 			self.avisar(_("Ponga el foco en el programa cuyo sonido quiere cambiar."))
 			return
 		funciones = {
@@ -669,8 +672,27 @@ class Controlador:
 			"audio_app_bajar": lambda: audio.cambiar_volumen_ventana(hwnd, -5),
 			"audio_app_silenciar": lambda: audio.alternar_silencio_ventana(hwnd),
 			"audio_app_decir": lambda: audio.decir_volumen_ventana(hwnd),
+			"audio_solo_app": lambda: audio.solo_esta_aplicacion(hwnd),
+			"audio_app_salida": lambda: audio.siguiente_salida_de_ventana(hwnd),
 		}
 		self._audio(funciones[accion])
+
+	def _iniciar_vigilante_audio(self) -> None:
+		"""Avisos de dispositivos de audio conectados y desconectados (se registra en el hilo principal)."""
+		from app.services import audio
+
+		def al_cambiar(texto: str) -> None:
+			if self.config.obtener("anuncios.dispositivos_audio", True):
+				wx.CallAfter(self.hablar, texto)
+			if self.ventana:
+				wx.CallAfter(lambda: self.ventana.area_audio.refrescar() if self.ventana.area_actual() is self.ventana.area_audio else None)
+
+		try:
+			self._vigilante_audio = audio.VigilanteDispositivos(al_cambiar)
+			self._vigilante_audio.iniciar()
+		except Exception:  # noqa: BLE001 - sin avisos de dispositivos, el resto sigue
+			log.warning("No se pudieron vigilar los dispositivos de audio", exc_info=True)
+			self._vigilante_audio = None
 
 	def decir_estado_sistema(self) -> None:
 		from app.services import equipo
