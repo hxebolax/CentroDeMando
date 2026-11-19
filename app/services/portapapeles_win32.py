@@ -140,8 +140,20 @@ if os.name == "nt":
 		"RemoveClipboardFormatListener": ([wintypes.HWND], wintypes.BOOL),
 		"RegisterClassW": ([ctypes.POINTER(_WNDCLASSW)], wintypes.ATOM),
 		"CreateWindowExW": (
-			[wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-			 wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID],
+			[
+				wintypes.DWORD,
+				wintypes.LPCWSTR,
+				wintypes.LPCWSTR,
+				wintypes.DWORD,
+				ctypes.c_int,
+				ctypes.c_int,
+				ctypes.c_int,
+				ctypes.c_int,
+				wintypes.HWND,
+				wintypes.HMENU,
+				wintypes.HINSTANCE,
+				wintypes.LPVOID,
+			],
 			wintypes.HWND,
 		),
 		"DestroyWindow": ([wintypes.HWND], wintypes.BOOL),
@@ -385,7 +397,9 @@ class MonitorPortapapeles:
 			log.error("No se pudo registrar la clase de ventana del portapapeles (error %s).", ctypes.get_last_error())
 			self._listo.set()
 			return
-		self.hwnd = int(_user32.CreateWindowExW(0, clase.lpszClassName, "Portapapeles", 0, 0, 0, 0, 0, HWND_MESSAGE, None, instancia, None) or 0)
+		self.hwnd = int(
+			_user32.CreateWindowExW(0, clase.lpszClassName, "Portapapeles", 0, 0, 0, 0, 0, HWND_MESSAGE, None, instancia, None) or 0
+		)
 		if not self.hwnd or not _user32.AddClipboardFormatListener(self.hwnd):
 			log.error("No se pudo escuchar el portapapeles (error %s).", ctypes.get_last_error())
 			self._listo.set()

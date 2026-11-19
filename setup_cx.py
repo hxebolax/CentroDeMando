@@ -34,7 +34,7 @@ DATA_PROHIBIDO = {"config", "logs", "db", "cache", "temp", "sessions", "backups"
 # Archivos que nunca se copian aunque estén en una carpeta distribuible.
 PATRONES_EXCLUIDOS = ("__pycache__", "*.pyc", "*.log", "*.tmp", "*.bak", "*.db", "*.key", ".gitkeep", "desktop.ini", "Thumbs.db")
 
-PAQUETES = ["wx", "app", "pyvda", "comtypes"]
+PAQUETES = ["wx", "app", "pyvda", "comtypes", "winrt"]
 PAQUETES_OPCIONALES = ["accessible_output2"]
 EXCLUDES = ["tkinter", "numpy", "unittest", "pydoc_data", "pip", "pytest", "_pytest", "ruff", "cx_Freeze"]
 

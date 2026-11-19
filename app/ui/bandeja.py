@@ -84,7 +84,22 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 		if not estado.escritorios:
 			# Aún sin conectar: se queda «Conectando...».
 			return
+		self._estado = estado
+		self._poner_texto()
+
+	def poner_no_leidas(self, cuantas: int) -> None:
+		"""Añade al texto del icono cuántas notificaciones quedan sin leer."""
+		self._no_leidas = cuantas
+		self._poner_texto()
+
+	def _poner_texto(self) -> None:
+		estado = getattr(self, "_estado", None)
+		if estado is None or not estado.escritorios:
+			return
 		texto = texto_emergente(estado)
+		cuantas = getattr(self, "_no_leidas", 0)
+		if cuantas:
+			texto += ". " + (_("1 notificación sin leer") if cuantas == 1 else _("{n} notificaciones sin leer").format(n=cuantas))
 		# El texto emergente de Windows admite 127 caracteres.
 		texto = texto[:127]
 		if texto != self._texto_actual:
@@ -132,6 +147,9 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 		self._agregar(menu, _("&Eliminar el escritorio actual..."), lambda _e: self._al_accion("eliminar_actual"))
 		menu.AppendSeparator()
 		self._agregar(menu, _("&Buscar una ventana..."), lambda _e: self._al_accion("buscar_ventana"))
+		self._agregar(menu, _("Historial del &portapapeles..."), lambda _e: self._al_accion("portapapeles_rapido"))
+		self._agregar(menu, _("Insertar un emo&ji..."), lambda _e: self._al_accion("emoticonos_rapido"))
+		self._agregar(menu, _("&Historial de notificaciones..."), lambda _e: self._al_accion("notificaciones_rapido"))
 		self._agregar(menu, _("&Teclas globales..."), lambda _e: self._al_menu("teclas_globales"))
 		self._agregar(menu, _("&Opciones..."), lambda _e: self._al_menu("opciones"))
 		menu.AppendSeparator()

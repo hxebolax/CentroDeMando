@@ -169,7 +169,11 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 	(
 		"Portapapeles",
 		[
-			Opcion("portapapeles.activo", "Guardar lo que se copia en el &historial", "Si se desmarca, el historial deja de crecer; lo guardado se conserva."),
+			Opcion(
+				"portapapeles.activo",
+				"Guardar lo que se copia en el &historial",
+				"Si se desmarca, el historial deja de crecer; lo guardado se conserva.",
+			),
 			Opcion(
 				"portapapeles.maximo",
 				"Número &máximo de elementos (0 = sin límite):",
@@ -178,8 +182,24 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				0,
 				100000,
 			),
-			Opcion("portapapeles.guardar_html", "Guardar también el &formato (HTML)", "Al pegar en un procesador de textos o en un correo se conserva el formato."),
-			Opcion("portapapeles.guardar_archivos", "Guardar las copias de a&rchivos", "Archivos y carpetas copiados en el Explorador, para pegarlos más tarde."),
+			Opcion(
+				"portapapeles.dias",
+				"&Borrar lo que no se use en estos días (0 = nunca):",
+				"Los elementos que no se copian ni se pegan en ese tiempo se borran solos. Los favoritos no caducan.",
+				"int",
+				0,
+				3650,
+			),
+			Opcion(
+				"portapapeles.guardar_html",
+				"Guardar también el &formato (HTML)",
+				"Al pegar en un procesador de textos o en un correo se conserva el formato.",
+			),
+			Opcion(
+				"portapapeles.guardar_archivos",
+				"Guardar las copias de a&rchivos",
+				"Archivos y carpetas copiados en el Explorador, para pegarlos más tarde.",
+			),
 			Opcion("portapapeles.guardar_imagenes", "Guardar las &imágenes", "Imágenes copiadas (capturas de pantalla, por ejemplo)."),
 			Opcion(
 				"portapapeles.maximo_imagen_mb",
@@ -247,6 +267,63 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				"int",
 				5,
 				200,
+			),
+		],
+	),
+	(
+		"Notificaciones",
+		[
+			Opcion(
+				"",
+				"Para guardar las notificaciones, Windows debe permitirlo en Configuración, Privacidad y seguridad, Notificaciones.",
+				"",
+				"nota",
+			),
+			Opcion(
+				"notificaciones.activo",
+				"Guardar las notificaciones en el &historial",
+				"Si se desmarca, las nuevas no se guardan; lo guardado se conserva.",
+			),
+			Opcion(
+				"notificaciones.intervalo_s",
+				"Comprobar cada estos &segundos:",
+				"Windows no avisa de las notificaciones nuevas: se le pregunta cada pocos segundos. Menos es más rápido.",
+				"int",
+				1,
+				60,
+			),
+			Opcion(
+				"notificaciones.anunciar_nuevas",
+				"A&nunciar las notificaciones nuevas por voz",
+				"Dice la aplicación y el título de cada notificación nueva.",
+			),
+			Opcion("notificaciones.anunciar_texto", "Decir también el &texto", "Al anunciar una notificación, lee también su texto."),
+			Opcion(
+				"notificaciones.marcar_leida_al_ver",
+				"Marcar como &leída al detenerse en ella",
+				"Una notificación se da por leída tras un momento seleccionada en la lista. Espacio la marca o desmarca a mano.",
+			),
+			Opcion(
+				"notificaciones.apps_ignoradas",
+				"Aplicaciones &ignoradas, separadas por comas:",
+				"Las notificaciones de estas aplicaciones no se guardan. También se añade desde el menú Notificaciones.",
+				"texto",
+			),
+			Opcion(
+				"notificaciones.maximo",
+				"Número &máximo de notificaciones (0 = sin límite):",
+				"Al pasarse se borran las más antiguas que no son favoritas.",
+				"int",
+				0,
+				100000,
+			),
+			Opcion(
+				"notificaciones.dias",
+				"Borrar las de más de estos &días (0 = nunca):",
+				"Las favoritas no se borran nunca solas.",
+				"int",
+				0,
+				3650,
 			),
 		],
 	),

@@ -60,18 +60,36 @@ def _barra(marco, *menus):
 
 # --- Funciones puras ---------------------------------------------------------
 
-@pytest.mark.parametrize(("etiqueta", "letra"), [
-	("&Guardar", "g"), ("A&plicar", "p"), ("Pan && vino", None), ("Pan && &vino", "v"),
-	("Sin letra", None), ("&Abrir...\tCtrl+O", "a"), ("Final&", None), ("&Índice", "í"),
-])
+
+@pytest.mark.parametrize(
+	("etiqueta", "letra"),
+	[
+		("&Guardar", "g"),
+		("A&plicar", "p"),
+		("Pan && vino", None),
+		("Pan && &vino", "v"),
+		("Sin letra", None),
+		("&Abrir...\tCtrl+O", "a"),
+		("Final&", None),
+		("&Índice", "í"),
+	],
+)
 def test_letra_de_acceso(etiqueta, letra):
 	assert rt.letra_de_acceso(etiqueta) == letra
 
 
-@pytest.mark.parametrize(("texto", "normalizado"), [
-	("ctrl+shift+s", "Ctrl+Mayús+S"), ("Mayús+Ctrl+S", "Ctrl+Mayús+S"), ("alt+f4", "Alt+F4"),
-	("Ctrl++", "Ctrl++"), ("Ctrl+Insert", "Ctrl+Insert"), ("Shift + F10", "Mayús+F10"), ("esc", "Escape"),
-])
+@pytest.mark.parametrize(
+	("texto", "normalizado"),
+	[
+		("ctrl+shift+s", "Ctrl+Mayús+S"),
+		("Mayús+Ctrl+S", "Ctrl+Mayús+S"),
+		("alt+f4", "Alt+F4"),
+		("Ctrl++", "Ctrl++"),
+		("Ctrl+Insert", "Ctrl+Insert"),
+		("Shift + F10", "Mayús+F10"),
+		("esc", "Escape"),
+	],
+)
 def test_normalizar_atajo(texto, normalizado):
 	assert rt.normalizar_atajo(texto) == normalizado
 
@@ -83,6 +101,7 @@ def test_atajo_de_entrada():
 
 
 # --- Pantallas correctas -----------------------------------------------------
+
 
 def test_dialogo_correcto_sin_problemas(dialogo):
 	panel = wx.Panel(dialogo)
@@ -115,6 +134,7 @@ def test_marco_con_menus_y_atajos_correctos(marco):
 
 # --- Etiquetas -----------------------------------------------------------------
 
+
 def test_campo_sin_etiqueta_y_etiqueta_tardia(dialogo):
 	panel = wx.Panel(dialogo)
 	wx.TextCtrl(panel)  # sin etiqueta
@@ -142,6 +162,7 @@ def test_controles_ocultos_no_cuentan(dialogo):
 
 
 # --- Letras repetidas ----------------------------------------------------------
+
 
 def test_letra_repetida_entre_etiqueta_y_boton(dialogo):
 	panel = wx.Panel(dialogo)
@@ -196,6 +217,7 @@ def test_letra_acentuada_es_aviso(dialogo):
 
 # --- Menús -------------------------------------------------------------------
 
+
 def test_control_que_choca_con_la_barra_de_menus(marco):
 	_barra(marco, ("&Archivo", ["&Salir"]), ("A&yuda", ["&Manual"]))
 	panel = wx.Panel(marco)
@@ -228,6 +250,7 @@ def test_submenus_se_revisan(marco):
 
 
 # --- Atajos ------------------------------------------------------------------
+
 
 def test_atajo_repetido_entre_menu_tabla_y_teclas_propias(marco):
 	_barra(marco, ("&Archivo", ["&Guardar\tCtrl+S", "&Sincronizar\tCtrl+S"]))

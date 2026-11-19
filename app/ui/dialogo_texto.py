@@ -161,7 +161,7 @@ def mostrar_documento(padre: wx.Window | None, nombre: str, titulo: str) -> bool
 			log.exception("No se pudo abrir %s en el navegador; se muestra como texto", ruta)
 	try:
 		texto = ruta.read_text(encoding="utf-8")
-	except (OSError, UnicodeDecodeError):
+	except OSError, UnicodeDecodeError:
 		log.exception("No se pudo leer %s", ruta)
 		mostrar_error(padre, _("No se pudo leer {ruta}.").format(ruta=ruta), titulo)
 		return False

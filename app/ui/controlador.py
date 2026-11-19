@@ -28,6 +28,7 @@ from app.services import sistema
 from app.services.escritorios import EstadoEscritorios, InfoEscritorio, InfoVentana
 from app.services.reglas import Regla, cargar_reglas
 from app.services import ventanas_win32 as w32
+from app.services.notificaciones import ACCESO_DENEGADO, Notificacion, PreferenciasNotificaciones, ServicioNotificaciones
 from app.services.portapapeles import Elemento, PreferenciasPortapapeles, ServicioPortapapeles
 from app.services.servicio import ORIGEN_EXTERNO, Preferencias, ServicioEscritorios
 from app.services.teclas import GestorTeclasGlobales, ResultadoRegistro
@@ -93,12 +94,17 @@ class Controlador:
 		servicio: ServicioEscritorios | None = None,
 		con_teclas: bool = True,
 		portapapeles: ServicioPortapapeles | None = None,
+		notificaciones: ServicioNotificaciones | None = None,
 	) -> None:
 		self.config = configuracion
 		self.servicio = servicio or ServicioEscritorios(self.preferencias)
 		self.portapapeles = portapapeles or ServicioPortapapeles(self.preferencias_portapapeles)
 		self._oyentes_portapapeles: list[Callable[[], None]] = []
 		self.portapapeles.al_agregar = lambda elemento: wx.CallAfter(self._al_copiar, elemento)
+		self.notificaciones = notificaciones or ServicioNotificaciones(self.preferencias_notificaciones)
+		self._oyentes_notificaciones: list[Callable[[], None]] = []
+		self.notificaciones.al_nuevas = lambda nuevas: wx.CallAfter(self._al_notificaciones, nuevas)
+		self.notificaciones.al_cambiar_acceso = lambda acceso: wx.CallAfter(self._al_cambiar_acceso, acceso)
 		self.teclas = GestorTeclasGlobales(self.ejecutar) if con_teclas else None
 		self.ventana: VentanaPrincipal | None = None
 		self._oyentes_estado: list[Callable[[EstadoEscritorios], None]] = []
@@ -118,6 +124,10 @@ class Controlador:
 		self.servicio.establecer_reglas(self.reglas())
 		self.servicio.iniciar()
 		try:
+			self.notificaciones.iniciar()
+		except Exception:  # noqa: BLE001 - sin notificaciones, el resto sigue funcionando
+			log.exception("No se pudo iniciar el historial de notificaciones")
+		try:
 			self.portapapeles.iniciar()
 		except Exception:  # noqa: BLE001 - sin historial, el resto del programa sigue funcionando
 			log.exception("No se pudo iniciar el historial del portapapeles")
@@ -131,6 +141,7 @@ class Controlador:
 			self.teclas.detener()
 		self.servicio.detener()
 		self.portapapeles.detener()
+		self.notificaciones.detener()
 
 	# ── Preferencias ────────────────────────────────────────────────────────
 
@@ -153,6 +164,7 @@ class Controlador:
 		return PreferenciasPortapapeles(
 			activo=bool(obtener("portapapeles.activo", True)),
 			maximo=int(obtener("portapapeles.maximo", 500)),
+			dias=int(obtener("portapapeles.dias", 0)),
 			guardar_html=bool(obtener("portapapeles.guardar_html", True)),
 			guardar_archivos=bool(obtener("portapapeles.guardar_archivos", True)),
 			guardar_imagenes=bool(obtener("portapapeles.guardar_imagenes", True)),
@@ -162,6 +174,17 @@ class Controlador:
 			restaurar_tras_pegar=bool(obtener("portapapeles.restaurar_tras_pegar", True)),
 			retraso_restaurar_ms=int(obtener("portapapeles.retraso_restaurar_ms", 500)),
 			metodo_pegado=str(obtener("portapapeles.metodo_pegado", "control_v")),
+		)
+
+	def preferencias_notificaciones(self) -> PreferenciasNotificaciones:
+		obtener = self.config.obtener
+		ignoradas = str(obtener("notificaciones.apps_ignoradas", ""))
+		return PreferenciasNotificaciones(
+			activo=bool(obtener("notificaciones.activo", True)),
+			intervalo_s=float(obtener("notificaciones.intervalo_s", 3)),
+			apps_ignoradas=tuple(a.strip() for a in ignoradas.replace(";", ",").split(",") if a.strip()),
+			maximo=int(obtener("notificaciones.maximo", 5000)),
+			dias=int(obtener("notificaciones.dias", 90)),
 		)
 
 	def atajos(self) -> dict[str, str]:
@@ -342,6 +365,12 @@ class Controlador:
 			wx.CallAfter(self._abrir_rapida, accion, destino)
 		elif accion == "pausar_portapapeles":
 			wx.CallAfter(self.alternar_captura)
+		elif accion == "notificaciones_rapido":
+			wx.CallAfter(self._abrir_rapida, accion, 0)
+		elif accion == "leer_ultima_notificacion":
+			wx.CallAfter(self.leer_ultima_notificacion)
+		elif accion == "pausar_notificaciones":
+			wx.CallAfter(self.alternar_notificaciones)
 		elif accion in ("eliminar_actual", "renombrar_actual", "selector", "buscar_ventana", "mostrar_gestor"):
 			wx.CallAfter(self._accion_de_interfaz, accion)
 		else:
@@ -398,14 +427,16 @@ class Controlador:
 
 		threading.Thread(target=envoltorio, name=nombre, daemon=True).start()
 
-	def pegar_elemento(self, identificador: int, destino: int) -> None:
+	def pegar_elemento(self, identificador: int, destino: int, transformacion: str | None = None) -> None:
 		"""Pega un elemento del historial en la ventana ``destino`` (o en la anterior si no se sabe)."""
 		if not destino:
-			self.con_destino_anterior(lambda hwnd: self.pegar_elemento(identificador, hwnd) if hwnd else self.copiar_elemento(identificador))
+			self.con_destino_anterior(
+				lambda hwnd: self.pegar_elemento(identificador, hwnd, transformacion) if hwnd else self.copiar_elemento(identificador)
+			)
 			return
 		self._en_hilo(
 			"pegar",
-			lambda: self.portapapeles.pegar(identificador, destino),
+			lambda: self.portapapeles.pegar(identificador, destino, transformacion),
 			_("No se pudo volver a la ventana para pegar. El elemento queda copiado en el portapapeles."),
 		)
 
@@ -433,11 +464,65 @@ class Controlador:
 					return ventana.hwnd
 			return 0
 
-		self.servicio.encolar(_("buscar la ventana anterior"), trabajo, lambda hwnd: wx.CallAfter(al_obtener, hwnd), lambda _m: wx.CallAfter(al_obtener, 0))
+		self.servicio.encolar(
+			_("buscar la ventana anterior"), trabajo, lambda hwnd: wx.CallAfter(al_obtener, hwnd), lambda _m: wx.CallAfter(al_obtener, 0)
+		)
 
 	def alternar_captura(self) -> None:
 		self.portapapeles.pausado = not self.portapapeles.pausado
 		self.hablar(_("Captura del portapapeles detenida") if self.portapapeles.pausado else _("Captura del portapapeles reanudada"), True)
+
+	# ── Notificaciones ──────────────────────────────────────────────────────
+
+	def suscribir_notificaciones(self, oyente: Callable[[], None]) -> None:
+		self._oyentes_notificaciones.append(oyente)
+
+	def notificar_no_leidas(self) -> None:
+		for oyente in list(self._oyentes_notificaciones):
+			try:
+				oyente()
+			except Exception:  # noqa: BLE001
+				log.exception("Error al refrescar las notificaciones")
+
+	def _al_notificaciones(self, nuevas: list[Notificacion]) -> None:
+		self.notificar_no_leidas()
+		if not self.config.obtener("notificaciones.anunciar_nuevas", False):
+			return
+		con_texto = self.config.obtener("notificaciones.anunciar_texto", True)
+		for notificacion in nuevas[-3:]:
+			texto = notificacion.resumen()
+			if con_texto and notificacion.texto:
+				texto += ". " + " ".join(notificacion.texto.split())[:300]
+			self.hablar(texto)
+
+	def _al_cambiar_acceso(self, acceso: str) -> None:
+		self.notificar_no_leidas()
+		if acceso == ACCESO_DENEGADO:
+			self.avisar(
+				_(
+					"Windows no deja leer las notificaciones. Actívelo en Configuración, Privacidad y seguridad, Notificaciones, "
+					"o desde el menú Notificaciones, Permiso de Windows."
+				)
+			)
+
+	def leer_ultima_notificacion(self) -> None:
+		ultima = self.notificaciones.historial.ultima()
+		if ultima is None:
+			self.hablar(_("No hay notificaciones en el historial."), True)
+			return
+		pendientes = self.notificaciones.historial.no_leidas()
+		from app.services.portapapeles import describir_tiempo
+
+		texto = f"{ultima.resumen()}. {' '.join(ultima.texto.split())} {describir_tiempo(ultima.creada)}."
+		if pendientes:
+			texto += " " + (_("1 sin leer.") if pendientes == 1 else _("{n} sin leer.").format(n=pendientes))
+		self.hablar(texto, True)
+
+	def alternar_notificaciones(self) -> None:
+		self.notificaciones.pausado = not self.notificaciones.pausado
+		self.hablar(
+			_("Captura de notificaciones detenida") if self.notificaciones.pausado else _("Captura de notificaciones reanudada"), True
+		)
 
 	def _abrir_rapida(self, accion: str, destino: int) -> None:
 		if self.ventana:

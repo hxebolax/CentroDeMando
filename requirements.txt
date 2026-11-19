@@ -4,5 +4,14 @@ wxPython>=4.2.2
 # Escritorios virtuales de Windows 10/11 (interfaces COM del Explorador).
 pyvda>=0.6.0
 comtypes>=1.4
+# Notificaciones de Windows (UserNotificationListener, WinRT).
+winrt-runtime>=4.2
+winrt-Windows.UI.Notifications.Management>=3.0
+winrt-Windows.UI.Notifications>=3.0
+winrt-Windows.Foundation>=3.0
+winrt-Windows.Foundation.Collections>=3.0
+winrt-Windows.ApplicationModel>=3.0
+winrt-Windows.Data.Xml.Dom>=3.0
+winrt-Windows.Storage.Streams>=3.0
 # Opcional: voz directa (NVDA, JAWS o SAPI). Sin él, la aplicación funciona igual.
 accessible_output2>=0.17

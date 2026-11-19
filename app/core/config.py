@@ -61,7 +61,8 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 	},
 	"anuncios": {
 		"anunciar_cambios": True,
-		"anunciar_cambios_externos": True,
+		# NVDA ya anuncia el escritorio al cambiar con Control+Windows+flechas: de fábrica no se repite.
+		"anunciar_cambios_externos": False,
 		"decir_numero": True,
 		"decir_total": False,
 		"decir_ventanas": False,
@@ -81,6 +82,8 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"activo": True,
 		# Elementos que se guardan como máximo (0 = sin límite). Los favoritos no cuentan para borrar.
 		"maximo": 500,
+		# Borrar lo que no se usa desde hace estos días (0 = nunca). Los favoritos no caducan.
+		"dias": 0,
 		"guardar_html": True,
 		"guardar_archivos": True,
 		"guardar_imagenes": True,
@@ -106,6 +109,19 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"maximo_recientes": 40,
 		"recientes": [],
 		"favoritos": [],
+	},
+	"notificaciones": {
+		"activo": True,
+		# Cada cuántos segundos se consulta a Windows (no avisa por sí solo de las nuevas).
+		"intervalo_s": 3,
+		"anunciar_nuevas": False,
+		"anunciar_texto": True,
+		"marcar_leida_al_ver": True,
+		# Aplicaciones cuyas notificaciones no se guardan, separadas por comas.
+		"apps_ignoradas": "",
+		# 0 = sin límite. Las favoritas no se borran nunca solas.
+		"maximo": 5000,
+		"dias": 90,
 	},
 	"ventanas": {
 		# Al mover la ventana activa a otro escritorio, ir con ella.

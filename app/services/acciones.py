@@ -29,6 +29,7 @@ CATEGORIA_GESTIONAR = "Gestionar escritorios"
 CATEGORIA_VENTANAS = "Ventanas"
 CATEGORIA_INFORMACION = "Información y aplicación"
 CATEGORIA_PORTAPAPELES = "Portapapeles y emoticonos"
+CATEGORIA_NOTIFICACIONES = "Notificaciones"
 
 # Cuántos escritorios tienen acción directa «Ir al escritorio N» (Ctrl+Alt+Win+1 … 0).
 ESCRITORIOS_DIRECTOS = 10
@@ -194,6 +195,27 @@ ACCIONES: list[Accion] = [
 		"Detener o reanudar la captura del portapapeles",
 		"Mientras está detenida, lo que se copia no se guarda en el historial.",
 		CATEGORIA_PORTAPAPELES,
+		"",
+	),
+	Accion(
+		"notificaciones_rapido",
+		"Historial de notificaciones",
+		"Abre el historial de notificaciones desde cualquier programa.",
+		CATEGORIA_NOTIFICACIONES,
+		"Ctrl+Alt+Win+A",
+	),
+	Accion(
+		"leer_ultima_notificacion",
+		"Decir la última notificación",
+		"Lee la notificación más reciente y cuántas quedan sin leer.",
+		CATEGORIA_NOTIFICACIONES,
+		"Ctrl+Alt+Win+U",
+	),
+	Accion(
+		"pausar_notificaciones",
+		"Detener o reanudar la captura de notificaciones",
+		"Mientras está detenida, las notificaciones nuevas no se guardan.",
+		CATEGORIA_NOTIFICACIONES,
 		"",
 	),
 	Accion(

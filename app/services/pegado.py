@@ -158,7 +158,7 @@ def pegar_contenido(
 			secuencia = escribir(anterior, dueno)
 			if al_escribir:
 				al_escribir(secuencia)
-		except (PortapapelesOcupado, OSError, MemoryError):
+		except PortapapelesOcupado, OSError, MemoryError:
 			log.warning("No se pudo restaurar el portapapeles anterior.", exc_info=True)
 	return True
 

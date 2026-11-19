@@ -13,7 +13,7 @@ from app.ui.accesibilidad.revision_teclado import afirmar_teclado_correcto
 
 from .conftest import esperar_servicio, procesar_eventos
 
-MENUS_ESPERADOS = ["&Escritorios", "Ve&ntanas", "&Portapapeles", "E&moticonos", "&Ver", "&Herramientas", "Ay&uda"]
+MENUS_ESPERADOS = ["&Escritorios", "Ve&ntanas", "&Portapapeles", "E&moticonos", "N&otificaciones", "&Ver", "&Herramientas", "Ay&uda"]
 ATAJOS_ESPERADOS = {
 	"crear": (wx.ACCEL_CTRL, ord("N")),
 	"renombrar": (wx.ACCEL_NORMAL, wx.WXK_F2),

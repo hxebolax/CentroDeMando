@@ -63,7 +63,9 @@ class AreaEmoticonos(wx.Panel):
 		fila = wx.BoxSizer(wx.HORIZONTAL)
 		etiqueta_buscar = wx.StaticText(self, label=_("&Buscar emoticono:"))
 		self.buscar = wx.TextCtrl(self)
-		self.buscar.SetHelpText(_("Escriba parte del nombre o una palabra clave, sin preocuparse de las tildes. Flecha abajo baja a la lista."))
+		self.buscar.SetHelpText(
+			_("Escriba parte del nombre o una palabra clave, sin preocuparse de las tildes. Flecha abajo baja a la lista.")
+		)
 		etiqueta_grupo = wx.StaticText(self, label=_("&Grupo:"))
 		self._grupos = [GRUPO_RECIENTES, GRUPO_FAVORITOS, *self.catalogo.grupos]
 		self.grupo = wx.Choice(self, choices=[_(g) for g in self._grupos])
@@ -111,6 +113,7 @@ class AreaEmoticonos(wx.Panel):
 		self.tono.Bind(wx.EVT_CHOICE, self._al_cambiar_tono)
 		self.texto.Bind(wx.EVT_KEY_DOWN, self._al_tecla_texto)
 		self.lista.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda _e: self.insertar())
+		self.lista.Bind(wx.EVT_CONTEXT_MENU, self._al_menu_contextual)
 		self.refrescar()
 
 	# ── Datos ───────────────────────────────────────────────────────────────
@@ -208,6 +211,47 @@ class AreaEmoticonos(wx.Panel):
 		self.controlador.hablar(mensaje, True)
 		self.refrescar()
 
+	def copiar_nombre(self) -> None:
+		emoji = self.seleccionado()
+		if emoji is not None:
+			self.controlador.copiar_texto(emoji.nombre)
+			self.controlador.hablar(_("Nombre copiado"), True)
+
+	def copiar_codigo(self) -> None:
+		"""«U+1F44B U+1F3FD»: el código Unicode de cada carácter."""
+		emoji = self.seleccionado()
+		if emoji is not None:
+			codigo = " ".join(f"U+{ord(c):04X}" for c in self._con_tono(emoji))
+			self.controlador.copiar_texto(codigo)
+			self.controlador.hablar(_("Copiado {codigo}").format(codigo=codigo), True)
+
+	def _al_menu_contextual(self, evento: wx.ContextMenuEvent) -> None:
+		emoji = self.seleccionado()
+		if emoji is None:
+			return
+		favoritos = self.config.obtener("emoticonos.favoritos", [])
+		menu = wx.Menu()
+		for etiqueta, funcion in (
+			(_("&Insertar en la ventana anterior"), self.insertar),
+			(_("&Copiar al portapapeles"), self.copiar),
+			(_("&Añadir al texto para insertar"), self.acumular),
+			(_("Quitar de &favoritos") if emoji.caracter in favoritos else _("Añadir a &favoritos"), self.alternar_favorito),
+			(_("Copiar el &nombre"), self.copiar_nombre),
+			(_("Copiar el código &Unicode"), self.copiar_codigo),
+		):
+			item = menu.Append(wx.ID_ANY, etiqueta)
+			menu.Bind(wx.EVT_MENU, lambda _e, f=funcion: f(), item)
+		posicion = evento.GetPosition()
+		if posicion == wx.DefaultPosition:
+			rect = self.lista.GetItemRect(max(self.lista.GetFocusedItem(), 0))
+			posicion = wx.Point(rect.x + 20, rect.y + rect.height)
+		else:
+			posicion = self.lista.ScreenToClient(posicion)
+		try:
+			self.lista.PopupMenu(menu, posicion)
+		finally:
+			menu.Destroy()
+
 	def vaciar_recientes(self) -> None:
 		self.config.establecer("emoticonos.recientes", [])
 		self.config.guardar()
@@ -237,7 +281,15 @@ class AreaEmoticonos(wx.Panel):
 	def _al_escribir_busqueda(self, _evento: wx.CommandEvent) -> None:
 		if self._busqueda_pendiente is not None:
 			self._busqueda_pendiente.Stop()
-		self._busqueda_pendiente = wx.CallLater(RETRASO_BUSQUEDA_MS, self.refrescar)
+		self._busqueda_pendiente = wx.CallLater(RETRASO_BUSQUEDA_MS, self._refrescar_busqueda)
+
+	def _refrescar_busqueda(self) -> None:
+		self.refrescar()
+		if self.buscar.GetValue().strip():
+			cuantos = len(self._emojis)
+			self.controlador.hablar(
+				_("Sin resultados") if not cuantos else (_("1 resultado") if cuantos == 1 else _("{n} resultados").format(n=cuantos))
+			)
 
 	def _al_tecla_buscar(self, evento: wx.KeyEvent) -> None:
 		tecla = evento.GetKeyCode()

@@ -1,6 +1,18 @@
-# Novedades de Gestor de Escritorios Virtuales
+# Novedades de Centro de Mando
 
-## 1.1.0
+## 2.0.0
+
+- El programa pasa a llamarse **Centro de Mando** y organiza la ventana principal en cuatro áreas: escritorios, portapapeles, emoticonos y notificaciones (Alt+1 a Alt+4).
+- **Historial del portapapeles**: textos con formato, archivos e imágenes; búsqueda, favoritos, nombres, pegar en la ventana de la que se vino (Control+Alt+Windows+V), pegar sin formato o transformado, y lo que había copiado vuelve al portapapeles al terminar. Respeta lo que los gestores de contraseñas marcan como privado.
+- **Emoticonos**: casi 4000 emojis con nombre en español, símbolos tipográficos y kaomoji; búsqueda sin tildes, recientes, favoritos y tono de piel; se escriben directamente donde está el cursor (Control+Alt+Windows+E).
+- **Notificaciones**: historial de las notificaciones de Windows y de las aplicaciones, con leídas, favoritas, filtro por aplicación, abrir la aplicación, descartar en Windows, exportar y aviso de las no leídas en la bandeja (Control+Alt+Windows+A y Control+Alt+Windows+U).
+- Al buscar en las listas se anuncia cuántos resultados hay.
+- «Decir las ventanas del escritorio actual» pasa a Control+Alt+Windows+W.
+- De fábrica ya no se repite el anuncio de los cambios de escritorio hechos con las teclas de Windows, porque NVDA ya los dice.
+- Si tenía activado «Iniciar con Windows» con el nombre anterior, se cambia solo al nuevo.
+
+
+## 1.1.0 (Gestor de Escritorios Virtuales)
 
 - Requiere Python 3.15 (la versión compilada lo lleva incluido).
 - En todas las listas: flechas izquierda y derecha para recorrer las columnas, Control+1 a 0 para leer una columna y Control+Mayúsculas+Inicio o Fin para la primera o la última.

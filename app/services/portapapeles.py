@@ -50,6 +50,23 @@ CREATE TABLE IF NOT EXISTS elementos (
 CREATE INDEX IF NOT EXISTS indice_usado ON elementos (usado DESC);
 """
 
+
+def _tipo_titulo(texto: str) -> str:
+	"""Mayúscula al principio de cada palabra, sin tocar el resto (``str.title`` estropea «l'agua»)."""
+	return " ".join(p[:1].upper() + p[1:].lower() for p in texto.split(" "))
+
+
+# Transformaciones al pegar: (nombre en el menú, función). Solo afectan a textos.
+TRANSFORMACIONES: dict[str, tuple[str, Callable[[str], str]]] = {
+	"sin_formato": ("Como texto sin formato", lambda t: t),
+	"una_linea": ("En una sola línea", lambda t: " ".join(t.split())),
+	"recortar": ("Sin espacios al principio ni al final de cada línea", lambda t: "\n".join(l.strip() for l in t.splitlines())),
+	"mayusculas": ("En MAYÚSCULAS", str.upper),
+	"minusculas": ("En minúsculas", str.lower),
+	"titulo": ("Con Mayúscula En Cada Palabra", _tipo_titulo),
+	"frase": ("Con mayúscula solo al principio", lambda t: t[:1].upper() + t[1:].lower()),
+}
+
 FILTRO_TODO = "todo"
 FILTRO_FAVORITOS = "favoritos"
 FILTRO_TEXTO = TIPO_TEXTO
@@ -229,6 +246,13 @@ class HistorialPortapapeles:
 		with self._candado, self._conexion:
 			return self._recortar(maximo)
 
+	def caducar(self, dias: int) -> int:
+		"""Borra lo que no se usa desde hace más de ``dias`` días (nunca los favoritos)."""
+		if dias <= 0:
+			return 0
+		with self._candado, self._conexion:
+			return self._conexion.execute("DELETE FROM elementos WHERE favorito = 0 AND usado < ?", (time.time() - dias * 86400,)).rowcount
+
 	def listar(self, filtro: str = FILTRO_TODO, buscar: str = "", limite: int = 5000) -> list[Elemento]:
 		"""Elementos del más reciente al más antiguo, sin imágenes."""
 		condiciones, valores = [], []
@@ -294,6 +318,7 @@ class HistorialPortapapeles:
 class PreferenciasPortapapeles:
 	activo: bool = True
 	maximo: int = 500
+	dias: int = 0
 	guardar_html: bool = True
 	guardar_archivos: bool = True
 	guardar_imagenes: bool = True
@@ -374,6 +399,7 @@ class ServicioPortapapeles:
 			return
 		contenido.origen = origen
 		elemento = self.historial.agregar(contenido, preferencias.maximo)
+		self.historial.caducar(preferencias.dias)
 		if elemento is not None and self.al_agregar is not None:
 			self.al_agregar(elemento)
 
@@ -386,8 +412,12 @@ class ServicioPortapapeles:
 		self.historial.marcar_usado(identificador)
 		return elemento
 
-	def pegar(self, identificador: int, hwnd: int) -> bool:
-		"""Pega el elemento en ``hwnd`` (llamar desde un hilo: espera y duerme)."""
+	def pegar(self, identificador: int, hwnd: int, transformacion: str | None = None) -> bool:
+		"""Pega el elemento en ``hwnd`` (llamar desde un hilo: espera y duerme).
+
+		:param transformacion: clave de ``TRANSFORMACIONES``: pega solo el texto,
+			transformado (sin formato HTML).
+		"""
 		from app.services import pegado
 
 		elemento = self.historial.obtener(identificador)
@@ -395,9 +425,12 @@ class ServicioPortapapeles:
 			return False
 		preferencias = self._preferencias()
 		self.historial.marcar_usado(identificador)
+		contenido = elemento.contenido()
+		if transformacion in TRANSFORMACIONES and elemento.tipo != TIPO_IMAGEN:
+			contenido = Contenido(texto=TRANSFORMACIONES[transformacion][1](elemento.texto_completo()))
 		return pegado.pegar_contenido(
 			hwnd,
-			elemento.contenido(),
+			contenido,
 			self.monitor.hwnd,
 			self.anotar_propia,
 			restaurar=preferencias.restaurar_tras_pegar,

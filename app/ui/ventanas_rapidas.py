@@ -19,6 +19,7 @@ import wx
 
 from app.services import ventanas_win32 as w32
 from app.ui.area_emoticonos import AreaEmoticonos
+from app.ui.area_notificaciones import AreaNotificaciones
 from app.ui.area_portapapeles import AreaPortapapeles
 
 if TYPE_CHECKING:
@@ -89,10 +90,10 @@ class PortapapelesRapido(VentanaRapida):
 		area.refrescar()
 		return area
 
-	def _pegar(self, identificador: int) -> None:
+	def _pegar(self, identificador: int, transformacion: str | None = None) -> None:
 		destino = self.destino
 		self.cerrar()
-		self.controlador.pegar_elemento(identificador, destino)
+		self.controlador.pegar_elemento(identificador, destino, transformacion)
 
 
 class EmoticonosRapido(VentanaRapida):
@@ -109,3 +110,15 @@ class EmoticonosRapido(VentanaRapida):
 		self.controlador.config.guardar()
 		self.cerrar()
 		self.controlador.insertar_texto(texto, destino)
+
+
+class NotificacionesRapido(VentanaRapida):
+	"""Historial de notificaciones: Intro abre la aplicación que la envió."""
+
+	def __init__(self, controlador: Controlador, destino: int) -> None:
+		super().__init__(_("Notificaciones"), controlador, destino)
+
+	def _crear_area(self) -> AreaNotificaciones:
+		area = AreaNotificaciones(self, self.controlador)
+		area.refrescar()
+		return area

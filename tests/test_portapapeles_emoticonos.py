@@ -8,7 +8,6 @@ import time
 import pytest
 import wx
 
-from app.services import emojis
 from app.services.emojis import CatalogoEmojis, anotar_reciente, normalizar
 from app.services.portapapeles import FILTRO_FAVORITOS, FILTRO_IMAGENES, HistorialPortapapeles, describir_tiempo
 from app.services.portapapeles_win32 import TIPO_ARCHIVOS, TIPO_IMAGEN, Contenido, dib_a_bmp, dimensiones_dib
@@ -56,7 +55,7 @@ def test_busqueda_filtros_nombre_y_vaciar(historial):
 	elemento = historial.agregar(Contenido(TIPO_IMAGEN, imagen=imagen))
 	assert [e.texto for e in historial.listar(buscar="VENTAS")] == ["Informe de ventas 100%"]
 	assert len(historial.listar(buscar="100%")) == 1, "el % se busca literal"
-	assert historial.listar(buscar="10_")== [], "el _ también"
+	assert historial.listar(buscar="10_") == [], "el _ también"
 	assert [e.id for e in historial.listar(FILTRO_IMAGENES)] == [elemento.id]
 	assert historial.listar(FILTRO_IMAGENES)[0].resumen() == "Imagen de 640 por 480"
 	assert historial.obtener(elemento.id).imagen == imagen, "la imagen solo viene al pedirla completa"
@@ -200,7 +199,7 @@ def test_area_portapapeles(controlador_falso, monkeypatch, tmp_path):
 	marco = wx.Frame(None)
 	pegados = []
 	try:
-		area = AreaPortapapeles(marco, controlador_falso, pegados.append)
+		area = AreaPortapapeles(marco, controlador_falso, lambda identificador, transformacion=None: pegados.append(identificador))
 		afirmar_teclado_correcto(marco)
 		area.refrescar()
 		assert area.lista.texto_celda(0, 0) == "segundo con dos líneas"
@@ -233,3 +232,15 @@ def test_ventanas_rapidas_accesibles(controlador_falso, tmp_path, clase):
 	finally:
 		ventana.Destroy()
 		controlador_falso.portapapeles.historial.cerrar()
+
+
+def test_transformaciones_al_pegar():
+	from app.services.portapapeles import TRANSFORMACIONES
+
+	texto = "  hola MUNDO  \n  segunda línea "
+	assert TRANSFORMACIONES["una_linea"][1](texto) == "hola MUNDO segunda línea"
+	assert TRANSFORMACIONES["recortar"][1](texto) == "hola MUNDO\nsegunda línea"
+	assert TRANSFORMACIONES["mayusculas"][1]("año") == "AÑO"
+	assert TRANSFORMACIONES["titulo"][1]("el ÁRBOL verde") == "El Árbol Verde"
+	assert TRANSFORMACIONES["frase"][1]("HOLA mundo") == "Hola mundo"
+	assert TRANSFORMACIONES["sin_formato"][1](texto) == texto

@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 import wx
 
 from app.services.portapapeles import (
+	TRANSFORMACIONES,
 	FILTRO_ARCHIVOS,
 	FILTRO_FAVORITOS,
 	FILTRO_IMAGENES,
@@ -63,7 +64,7 @@ RETRASO_BUSQUEDA_MS = 200
 class AreaPortapapeles(wx.Panel):
 	"""Historial del portapapeles. ``al_pegar(id)`` decide a dónde se pega."""
 
-	def __init__(self, padre: wx.Window, controlador: Controlador, al_pegar: Callable[[int], None]) -> None:
+	def __init__(self, padre: wx.Window, controlador: Controlador, al_pegar: Callable[..., None]) -> None:
 		super().__init__(padre)
 		self.controlador = controlador
 		self._al_pegar = al_pegar
@@ -125,7 +126,9 @@ class AreaPortapapeles(wx.Panel):
 		if not self:
 			return
 		try:
-			self._elementos = self.controlador.portapapeles.historial.listar(FILTROS[max(self.filtro.GetSelection(), 0)][0], self.buscar.GetValue())
+			self._elementos = self.controlador.portapapeles.historial.listar(
+				FILTROS[max(self.filtro.GetSelection(), 0)][0], self.buscar.GetValue()
+			)
 		except Exception:  # noqa: BLE001 - base de datos bloqueada o dañada: se avisa y se sigue
 			log.exception("No se pudo leer el historial del portapapeles")
 			self._elementos = []
@@ -163,10 +166,14 @@ class AreaPortapapeles(wx.Panel):
 
 	# ── Acciones ────────────────────────────────────────────────────────────
 
-	def pegar(self) -> None:
+	def pegar(self, transformacion: str | None = None) -> None:
 		elemento = self.seleccionado()
-		if elemento is not None:
-			self._al_pegar(elemento.id)
+		if elemento is None:
+			return
+		if transformacion and elemento.tipo == "imagen":
+			self.controlador.hablar(_("Una imagen no se puede transformar."), True)
+			return
+		self._al_pegar(elemento.id, transformacion)
 
 	def copiar(self) -> None:
 		elemento = self.seleccionado()
@@ -228,6 +235,8 @@ class AreaPortapapeles(wx.Panel):
 		tecla, modificadores = evento.GetKeyCode(), evento.GetModifiers()
 		if tecla in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and modificadores == wx.MOD_SHIFT:
 			self.copiar()
+		elif tecla in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and modificadores == wx.MOD_CONTROL | wx.MOD_SHIFT:
+			self.pegar("sin_formato")
 		elif tecla == wx.WXK_F2 and modificadores == wx.MOD_NONE:
 			self.renombrar()
 		elif tecla == wx.WXK_F4 and modificadores == wx.MOD_NONE:
@@ -242,7 +251,16 @@ class AreaPortapapeles(wx.Panel):
 		# Se espera a que se deje de escribir: releer en cada letra haría hablar a la lista sin parar.
 		if self._busqueda_pendiente is not None:
 			self._busqueda_pendiente.Stop()
-		self._busqueda_pendiente = wx.CallLater(RETRASO_BUSQUEDA_MS, self.refrescar)
+		self._busqueda_pendiente = wx.CallLater(RETRASO_BUSQUEDA_MS, self._refrescar_busqueda)
+
+	def _refrescar_busqueda(self) -> None:
+		"""Tras escribir en la búsqueda: relee y dice cuántos resultados hay."""
+		self.refrescar()
+		if self.buscar.GetValue().strip():
+			cuantos = len(self._elementos)
+			self.controlador.hablar(
+				_("Sin resultados") if not cuantos else (_("1 resultado") if cuantos == 1 else _("{n} resultados").format(n=cuantos))
+			)
 
 	def _al_tecla_buscar(self, evento: wx.KeyEvent) -> None:
 		if evento.GetKeyCode() in (wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN) and not evento.HasAnyModifiers():
@@ -266,6 +284,7 @@ class AreaPortapapeles(wx.Panel):
 		menu = wx.Menu()
 		for etiqueta, funcion in (
 			(_("&Pegar en la ventana anterior"), self.pegar),
+			(_("Pegar como texto &sin formato"), lambda: self.pegar("sin_formato")),
 			(_("&Copiar al portapapeles"), self.copiar),
 			(_("Quitar de &favoritos") if elemento.favorito else _("Añadir a &favoritos"), self.alternar_favorito),
 			(_("Cambiar el &nombre..."), self.renombrar),
@@ -273,6 +292,14 @@ class AreaPortapapeles(wx.Panel):
 		):
 			item = menu.Append(wx.ID_ANY, etiqueta)
 			menu.Bind(wx.EVT_MENU, lambda _e, f=funcion: f(), item)
+		if elemento.tipo != "imagen":
+			submenu = wx.Menu()
+			for clave, (nombre, _funcion) in TRANSFORMACIONES.items():
+				if clave == "sin_formato":
+					continue
+				item = submenu.Append(wx.ID_ANY, _(nombre))
+				submenu.Bind(wx.EVT_MENU, lambda _e, c=clave: self.pegar(c), item)
+			menu.AppendSubMenu(submenu, _("Pegar &transformado"))
 		posicion = evento.GetPosition()
 		if posicion == wx.DefaultPosition:
 			rect = self.lista.GetItemRect(max(self.lista.GetFocusedItem(), 0))

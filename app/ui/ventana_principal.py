@@ -25,7 +25,7 @@ from __future__ import annotations
 import builtins
 import logging
 import os
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +40,6 @@ from app.services.escritorios import EstadoEscritorios, InfoVentana
 from app.ui import listas
 from app.ui.listas import actualizar_lista
 from app.ui.accesibilidad.dialogos import confirmar, pedir_texto
-from app.ui.accesibilidad.lista import ListaAccesible
 from app.ui.bandeja import IconoBandeja
 from app.ui.controlador import Controlador
 from app.ui.dialogo_texto import mostrar_documento, mostrar_error, mostrar_mensaje
@@ -96,7 +95,12 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("fondo", "&Fondo de pantalla...", "Elige una imagen de fondo para el escritorio seleccionado.", wx.ITEM_NORMAL),
 			("fondo_todos", "Fondo para &todos...", "Elige una imagen de fondo para todos los escritorios.", wx.ITEM_NORMAL),
 			None,
-			("ocultar", "Ocultar en la b&andeja", "Oculta la ventana; Centro de Mando sigue en la bandeja (también con Escape).", wx.ITEM_NORMAL),
+			(
+				"ocultar",
+				"Ocultar en la b&andeja",
+				"Oculta la ventana; Centro de Mando sigue en la bandeja (también con Escape).",
+				wx.ITEM_NORMAL,
+			),
 			("salir", "&Salir\tCtrl+Q", "Cierra Centro de Mando por completo; las teclas globales dejan de funcionar.", wx.ITEM_NORMAL),
 		],
 	),
@@ -159,16 +163,52 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 				"Pega el elemento seleccionado en la ventana que usaba antes de Centro de Mando (también con Intro).",
 				wx.ITEM_NORMAL,
 			),
-			("copiar_elemento", "&Copiar al portapapeles", "Copia el elemento seleccionado sin pegarlo (también con Mayúsculas+Intro).", wx.ITEM_NORMAL),
-			("favorito_elemento", "Añadir o quitar de &favoritos", "Marca o desmarca el elemento como favorito (también con F4).", wx.ITEM_NORMAL),
-			("renombrar_elemento", "Cambiar el &nombre del elemento...", "Pone un nombre al elemento para reconocerlo (también con F2 en la lista).", wx.ITEM_NORMAL),
+			(
+				"pegar_sin_formato",
+				"Pegar como texto &sin formato",
+				"Pega solo el texto del elemento, sin negritas ni enlaces (también con Control+Mayúsculas+Intro).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"copiar_elemento",
+				"&Copiar al portapapeles",
+				"Copia el elemento seleccionado sin pegarlo (también con Mayúsculas+Intro).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"favorito_elemento",
+				"Añadir o quitar de &favoritos",
+				"Marca o desmarca el elemento como favorito (también con F4).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"renombrar_elemento",
+				"Cambiar el &nombre del elemento...",
+				"Pone un nombre al elemento para reconocerlo (también con F2 en la lista).",
+				wx.ITEM_NORMAL,
+			),
 			("eliminar_elemento", "&Eliminar el elemento", "Borra el elemento del historial (también con Suprimir).", wx.ITEM_NORMAL),
 			None,
 			("vaciar_historial", "&Vaciar el historial...", "Borra todo el historial salvo los favoritos.", wx.ITEM_NORMAL),
-			("exportar_historial", "E&xportar los textos...", "Guarda todos los textos del historial en un archivo de texto.", wx.ITEM_NORMAL),
-			("pausar_captura", "&Detener la captura", "Mientras está marcada, lo que se copia no se guarda en el historial.", wx.ITEM_CHECK),
+			(
+				"exportar_historial",
+				"E&xportar los textos...",
+				"Guarda todos los textos del historial en un archivo de texto.",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"pausar_captura",
+				"&Detener la captura",
+				"Mientras está marcada, lo que se copia no se guarda en el historial.",
+				wx.ITEM_CHECK,
+			),
 			None,
-			("portapapeles_rapido", "Abrir la lista &rápida", "Abre la ventana rápida del historial, la misma de la tecla global.", wx.ITEM_NORMAL),
+			(
+				"portapapeles_rapido",
+				"Abrir la lista &rápida",
+				"Abre la ventana rápida del historial, la misma de la tecla global.",
+				wx.ITEM_NORMAL,
+			),
 		],
 	),
 	(
@@ -180,12 +220,107 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 				"Escribe el emoticono seleccionado en la ventana que usaba antes de Centro de Mando (también con Intro).",
 				wx.ITEM_NORMAL,
 			),
-			("copiar_emoticono", "&Copiar al portapapeles", "Copia el emoticono seleccionado (también con Mayúsculas+Intro).", wx.ITEM_NORMAL),
-			("acumular_emoticono", "&Añadir al texto para insertar", "Va juntando emoticonos para insertarlos de una vez (también con Control+Intro).", wx.ITEM_NORMAL),
-			("favorito_emoticono", "Añadir o quitar de &favoritos", "Marca o desmarca el emoticono como favorito (también con F4).", wx.ITEM_NORMAL),
+			(
+				"copiar_emoticono",
+				"&Copiar al portapapeles",
+				"Copia el emoticono seleccionado (también con Mayúsculas+Intro).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"acumular_emoticono",
+				"&Añadir al texto para insertar",
+				"Va juntando emoticonos para insertarlos de una vez (también con Control+Intro).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"favorito_emoticono",
+				"Añadir o quitar de &favoritos",
+				"Marca o desmarca el emoticono como favorito (también con F4).",
+				wx.ITEM_NORMAL,
+			),
 			None,
 			("vaciar_recientes", "&Vaciar los usados recientemente", "Borra la lista de emoticonos usados recientemente.", wx.ITEM_NORMAL),
-			("emoticonos_rapido", "Abrir la lista &rápida", "Abre la ventana rápida de emoticonos, la misma de la tecla global.", wx.ITEM_NORMAL),
+			(
+				"emoticonos_rapido",
+				"Abrir la lista &rápida",
+				"Abre la ventana rápida de emoticonos, la misma de la tecla global.",
+				wx.ITEM_NORMAL,
+			),
+		],
+	),
+	(
+		"N&otificaciones",
+		[
+			(
+				"abrir_app_notificacion",
+				"&Abrir la aplicación que la envió",
+				"Abre la aplicación de la notificación seleccionada (también con Intro).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"copiar_notificacion",
+				"&Copiar el texto",
+				"Copia el título y el texto de la notificación (también con Mayúsculas+Intro).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"leida_notificacion",
+				"Marcar como &leída o no leída",
+				"Cambia si la notificación está leída (también con Espacio).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"favorita_notificacion",
+				"Añadir o quitar de &favoritas",
+				"Las favoritas no se borran nunca solas (también con F4).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"descartar_notificacion",
+				"&Descartar en Windows",
+				"La quita del centro de notificaciones de Windows; en el historial se queda.",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"eliminar_notificacion",
+				"&Eliminar del historial",
+				"La borra del historial (también con Suprimir; Mayúsculas+Suprimir la descarta también de Windows).",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"ignorar_app_notificacion",
+				"&Ignorar las de esta aplicación",
+				"Las notificaciones nuevas de esta aplicación ya no se guardarán.",
+				wx.ITEM_NORMAL,
+			),
+			None,
+			("todas_leidas", "Marcar &todas como leídas", "Marca como leídas todas las notificaciones del historial.", wx.ITEM_NORMAL),
+			("vaciar_notificaciones", "&Vaciar el historial...", "Borra el historial salvo las favoritas.", wx.ITEM_NORMAL),
+			(
+				"exportar_notificaciones",
+				"E&xportar...",
+				"Guarda en un archivo CSV o de texto las notificaciones que se ven en la lista.",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"pausar_notificaciones",
+				"Detener la ca&ptura",
+				"Mientras está marcada, las notificaciones nuevas no se guardan.",
+				wx.ITEM_CHECK,
+			),
+			(
+				"permiso_notificaciones",
+				"Per&miso de Windows...",
+				"Abre la configuración de Windows que permite leer las notificaciones.",
+				wx.ITEM_NORMAL,
+			),
+			None,
+			(
+				"notificaciones_rapido",
+				"Abrir la lista &rápida",
+				"Abre la ventana rápida de notificaciones, la misma de la tecla global.",
+				wx.ITEM_NORMAL,
+			),
 		],
 	),
 	(
@@ -194,6 +329,7 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("area_escritorios", "Área de e&scritorios\tAlt+1", "Muestra el área de escritorios y ventanas.", wx.ITEM_NORMAL),
 			("area_portapapeles", "Área de &portapapeles\tAlt+2", "Muestra el historial del portapapeles.", wx.ITEM_NORMAL),
 			("area_emoticonos", "Área de e&moticonos\tAlt+3", "Muestra los emoticonos.", wx.ITEM_NORMAL),
+			("area_notificaciones", "Área de n&otificaciones\tAlt+4", "Muestra el historial de notificaciones.", wx.ITEM_NORMAL),
 			None,
 			(
 				"ver_todas",
@@ -369,11 +505,20 @@ class VentanaPrincipal(wx.Frame):
 		from app.ui.area_emoticonos import AreaEmoticonos
 		from app.ui.area_portapapeles import AreaPortapapeles
 
-		self.area_portapapeles = AreaPortapapeles(self.libro, self.controlador, lambda identificador: self.controlador.pegar_elemento(identificador, 0))
+		self.area_portapapeles = AreaPortapapeles(
+			self.libro,
+			self.controlador,
+			lambda identificador, transformacion=None: self.controlador.pegar_elemento(identificador, 0, transformacion),
+		)
 		self.libro.AddPage(self.area_portapapeles, _("Portapapeles"))
 		self.area_emoticonos = AreaEmoticonos(self.libro, self.controlador, lambda texto: self.controlador.insertar_texto(texto, 0))
 		self.libro.AddPage(self.area_emoticonos, _("Emoticonos"))
-		self.areas = [self.panel, self.area_portapapeles, self.area_emoticonos]
+		from app.ui.area_notificaciones import AreaNotificaciones
+
+		self.area_notificaciones = AreaNotificaciones(self.libro, self.controlador)
+		self.libro.AddPage(self.area_notificaciones, _("Notificaciones"))
+		self.areas = [self.panel, self.area_portapapeles, self.area_emoticonos, self.area_notificaciones]
+		self.controlador.suscribir_notificaciones(self._al_cambiar_notificaciones)
 		marco = wx.BoxSizer(wx.VERTICAL)
 		marco.Add(self.libro, 1, wx.EXPAND)
 		self.SetSizer(marco)
@@ -607,25 +752,99 @@ class VentanaPrincipal(wx.Frame):
 		if area is self.panel:
 			self._enfocar_lista()
 		else:
-			if area is self.area_portapapeles:
+			if area in (self.area_portapapeles, self.area_notificaciones):
 				area.refrescar()
 			area.enfocar()
 
 	def _al_cambiar_area(self, evento: wx.BookCtrlEvent) -> None:
 		if evento.GetSelection() == 1:
 			self.area_portapapeles.refrescar()
+		elif evento.GetSelection() == 3:
+			self.area_notificaciones.refrescar()
+			self.controlador.notificaciones.consultar_ya()
 		evento.Skip()
 
 	def _al_cambiar_historial(self) -> None:
 		if self and self.IsShown() and self.area_actual() is self.area_portapapeles:
 			self.area_portapapeles.refrescar()
 
+	def _al_cambiar_notificaciones(self) -> None:
+		if not self:
+			return
+		if self.IsShown() and self.area_actual() is self.area_notificaciones:
+			self.area_notificaciones.refrescar()
+		if self._bandeja is not None:
+			self._bandeja.poner_no_leidas(self.controlador.notificaciones.historial.no_leidas())
+
+	def _al_area_notificaciones(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(3)
+
+	def _al_abrir_app_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.abrir_app()
+
+	def _al_copiar_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.copiar()
+
+	def _al_leida_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.alternar_leida()
+
+	def _al_favorita_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.alternar_favorita()
+
+	def _al_descartar_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.descartar()
+
+	def _al_eliminar_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.eliminar()
+
+	def _al_ignorar_app_notificacion(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.ignorar_app()
+
+	def _al_todas_leidas(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.marcar_todas_leidas()
+
+	def _al_vaciar_notificaciones(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_notificaciones.vaciar()
+
+	def _al_exportar_notificaciones(self, _evento: wx.CommandEvent | None) -> None:
+		with wx.FileDialog(
+			self,
+			_("Exportar las notificaciones"),
+			defaultFile="notificaciones.csv",
+			wildcard=_("Hoja de cálculo CSV (*.csv)|*.csv|Texto (*.txt)|*.txt"),
+			style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+		) as dialogo:
+			if dialogo.ShowModal() != wx.ID_OK:
+				return
+			ruta = Path(dialogo.GetPath())
+		try:
+			cuantas = self.controlador.notificaciones.historial.exportar(ruta, list(self.area_notificaciones._notificaciones))
+		except OSError:
+			log.exception("No se pudo exportar a %s", ruta)
+			mostrar_error(self, _("No se pudo escribir {ruta}.").format(ruta=ruta), _("Exportar"))
+			return
+		self.controlador.hablar(_("Exportadas {n} notificaciones").format(n=cuantas), True)
+
+	def _al_pausar_notificaciones(self, evento: wx.CommandEvent) -> None:
+		if bool(evento.IsChecked()) != self.controlador.notificaciones.pausado:
+			self.controlador.alternar_notificaciones()
+
+	def _al_permiso_notificaciones(self, _evento: wx.CommandEvent | None) -> None:
+		try:
+			os.startfile("ms-settings:privacy-notifications")  # noqa: S606 - página de Configuración de Windows
+		except OSError:
+			log.exception("No se pudo abrir la configuración de privacidad")
+		self.controlador.notificaciones.consultar_ya()
+
+	def _al_notificaciones_rapido(self, _evento: wx.CommandEvent | None) -> None:
+		self.abrir_ventana_rapida("notificaciones_rapido", 0)
+
 	def abrir_ventana_rapida(self, accion: str, destino: int) -> None:
 		"""Abre la ventana rápida de portapapeles o de emoticonos para la ventana ``destino``."""
-		from app.ui.ventanas_rapidas import EmoticonosRapido, PortapapelesRapido
+		from app.ui.ventanas_rapidas import EmoticonosRapido, NotificacionesRapido, PortapapelesRapido
 
 		self._cerrar_selector()
-		clase = PortapapelesRapido if accion == "portapapeles_rapido" else EmoticonosRapido
+		clase = {"portapapeles_rapido": PortapapelesRapido, "notificaciones_rapido": NotificacionesRapido}.get(accion, EmoticonosRapido)
 		self._selector = clase(self.controlador, destino)
 		self._selector.abrir()
 
@@ -640,6 +859,9 @@ class VentanaPrincipal(wx.Frame):
 
 	def _al_pegar_elemento(self, _evento: wx.CommandEvent | None) -> None:
 		self.area_portapapeles.pegar()
+
+	def _al_pegar_sin_formato(self, _evento: wx.CommandEvent | None) -> None:
+		self.area_portapapeles.pegar("sin_formato")
 
 	def _al_copiar_elemento(self, _evento: wx.CommandEvent | None) -> None:
 		self.area_portapapeles.copiar()
@@ -976,6 +1198,7 @@ class VentanaPrincipal(wx.Frame):
 		self.elementos_menu["anclar_ventana"].Check(bool(ventana and ventana.anclada))
 		self.elementos_menu["anclar_aplicacion"].Check(bool(ventana and ventana.app_anclada))
 		self.elementos_menu["pausar_captura"].Check(self.controlador.portapapeles.pausado)
+		self.elementos_menu["pausar_notificaciones"].Check(self.controlador.notificaciones.pausado)
 		evento.Skip()
 
 	# ── Manejadores: Escritorios ─────────────────────────────────────────────
