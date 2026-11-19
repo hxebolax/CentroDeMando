@@ -247,6 +247,13 @@ ACCIONES: list[Accion] = [
 	Accion("bloquear_equipo", "Bloquear el equipo", "Bloquea la sesión de Windows.", CATEGORIA_SISTEMA, ""),
 	Accion("apagar_pantalla", "Apagar la pantalla", "Apaga el monitor; se enciende al tocar el teclado o el ratón.", CATEGORIA_SISTEMA, ""),
 	Accion(
+		"lanzador",
+		"Lanzador",
+		"Busca y abre programas, ajustes de Windows y cualquier acción de Centro de Mando; también calcula.",
+		CATEGORIA_INFORMACION,
+		"Ctrl+Alt+Win+Espacio",
+	),
+	Accion(
 		"anunciar_actual",
 		"Decir el escritorio actual",
 		"Anuncia el número y el nombre del escritorio actual y cuántos hay.",

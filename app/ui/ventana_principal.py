@@ -65,6 +65,7 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 	(
 		"&Archivo",
 		[
+			("lanzador", "&Lanzador...\tCtrl+Shift+P", "Busca y abre programas, ajustes de Windows y acciones de Centro de Mando; también calcula.", wx.ITEM_NORMAL),
 			("abrir_rapida", "Abrir la lista &rápida del área\tCtrl+L", "Abre la ventana rápida del área actual, la misma de su tecla global.", wx.ITEM_NORMAL),
 			("exportar", "E&xportar...", "Exporta el historial del área actual (portapapeles o notificaciones).", wx.ITEM_NORMAL),
 			None,
@@ -649,6 +650,9 @@ class VentanaPrincipal(wx.Frame):
 		else:
 			self.controlador.hablar(_("Esta área no tiene buscador."), True)
 
+	def _al_lanzador(self, _evento: wx.CommandEvent | None) -> None:
+		self.abrir_ventana_rapida("lanzador", 0)
+
 	def _al_abrir_rapida(self, _evento: wx.CommandEvent | None) -> None:
 		area = self.area_actual()
 		rapidas = {
@@ -765,13 +769,14 @@ class VentanaPrincipal(wx.Frame):
 
 	def abrir_ventana_rapida(self, accion: str, destino: int) -> None:
 		"""Abre la ventana rápida de portapapeles o de emoticonos para la ventana ``destino``."""
-		from app.ui.ventanas_rapidas import EmoticonosRapido, FragmentosRapido, NotificacionesRapido, PortapapelesRapido
+		from app.ui.ventanas_rapidas import EmoticonosRapido, FragmentosRapido, LanzadorRapido, NotificacionesRapido, PortapapelesRapido
 
 		self._cerrar_selector()
 		clase = {
 			"portapapeles_rapido": PortapapelesRapido,
 			"notificaciones_rapido": NotificacionesRapido,
 			"fragmentos_rapido": FragmentosRapido,
+			"lanzador": LanzadorRapido,
 		}.get(accion, EmoticonosRapido)
 		self._selector = clase(self.controlador, destino)
 		self._selector.abrir()

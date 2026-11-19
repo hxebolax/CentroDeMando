@@ -2,7 +2,7 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 2.1.0
+- Versión: 2.2.0
 - Autor: Héctor J. Benítez Corredera
 - Plataforma: Windows 10 y 11 de 64 bits
 - Idioma: español
@@ -51,6 +51,10 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 **Sistema**
 
 - Estado del equipo anunciable (batería, procesador, memoria, disco, red) y energía: bloquear, suspender, hibernar, apagar la pantalla, apagado o reinicio programados y mantener despierto.
+
+**Lanzador**
+
+- Control+Alt+Windows+Espacio: escriba y abra al momento programas, ajustes de Windows o cualquier acción de Centro de Mando; también calcula («15% de 80»).
 
 **En todo el programa**
 
@@ -114,6 +118,7 @@ app/services/               Lógica sin wx
   fragmentos.py             Fragmentos de texto y variables
   audio.py                  Dispositivos, volumen y sesiones de audio
   equipo.py                 Estado del equipo y energía
+  lanzador.py               Lanzador: programas (Get-StartApps), ajustes, acciones y calculadora segura
   notificaciones.py         Fuente WinRT, historial SQLite y servicio de sondeo
   ventanas_win32.py         Utilidades Win32 de ventanas y foco
   sistema.py                Inicio con Windows y tonos

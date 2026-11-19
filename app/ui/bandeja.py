@@ -146,6 +146,7 @@ class IconoBandeja(wx.adv.TaskBarIcon):
 		self._agregar(menu, _("Cambiar el &nombre del escritorio actual..."), lambda _e: self._al_accion("renombrar_actual"))
 		self._agregar(menu, _("&Eliminar el escritorio actual..."), lambda _e: self._al_accion("eliminar_actual"))
 		menu.AppendSeparator()
+		self._agregar(menu, _("&Lanzador..."), lambda _e: self._al_accion("lanzador"))
 		self._agregar(menu, _("&Buscar una ventana..."), lambda _e: self._al_accion("buscar_ventana"))
 		self._agregar(menu, _("Historial del &portapapeles..."), lambda _e: self._al_accion("portapapeles_rapido"))
 		self._agregar(menu, _("Insertar un emo&ji..."), lambda _e: self._al_accion("emoticonos_rapido"))

@@ -389,6 +389,13 @@ class Controlador:
 			equipo.apagar_pantalla()
 		elif accion == "pausar_portapapeles":
 			wx.CallAfter(self.alternar_captura)
+		elif accion == "lanzador":
+			destino = w32.ventana_activa()
+			if destino and w32.pid(destino) == os.getpid():
+				destino = 0
+			wx.CallAfter(self._abrir_rapida, accion, destino)
+		elif accion.startswith("area:") and accion[5:].isdigit():
+			wx.CallAfter(self._mostrar_area, int(accion[5:]))
 		elif accion == "fragmentos_rapido":
 			destino = w32.ventana_activa()
 			if destino and w32.pid(destino) == os.getpid():
@@ -644,6 +651,63 @@ class Controlador:
 		except OSError:
 			log.exception("No se pudo abrir la configuración de privacidad")
 		self.notificaciones.consultar_ya()
+
+	# ── Lanzador ────────────────────────────────────────────────────────────
+
+	AREAS = ("Escritorios", "Portapapeles", "Fragmentos de texto", "Emoticonos", "Notificaciones", "Audio", "Sistema")
+
+	@property
+	def catalogo_lanzador(self):
+		"""Programas, ajustes y acciones para el lanzador (se crea la primera vez)."""
+		if getattr(self, "_catalogo_lanzador", None) is None:
+			from app.services.lanzador import TIPO_ACCION, CatalogoLanzador, Elemento
+
+			acciones = [
+				Elemento(f"accion:{a.id}", a.nombre, TIPO_ACCION, a.id, a.descripcion)
+				for a in catalogo.ACCIONES
+				if a.id != "lanzador"
+			]
+			acciones += [
+				Elemento(f"accion:area:{n}", _("Ver el área de {a}").format(a=nombre.lower()), TIPO_ACCION, f"area:{n}", "ir mostrar pestaña")
+				for n, nombre in enumerate(self.AREAS)
+			]
+			for nombre, accion in (
+				(_("Opciones de Centro de Mando"), "interfaz:opciones"),
+				(_("Teclas globales de Centro de Mando"), "interfaz:teclas_globales"),
+				(_("Reglas de ventanas"), "interfaz:reglas"),
+				(_("Manual de Centro de Mando"), "interfaz:manual"),
+			):
+				acciones.append(Elemento(f"accion:{accion}", nombre, TIPO_ACCION, accion, "configuración ayuda"))
+			self._catalogo_lanzador = CatalogoLanzador(acciones)
+		return self._catalogo_lanzador
+
+	def ejecutar_elemento_lanzador(self, elemento, destino: int = 0) -> None:
+		from app.services.lanzador import TIPO_ACCION, TIPO_RESULTADO, ejecutar_destino
+
+		usos = dict(self.config.obtener("lanzador.usos", {}))
+		if elemento.tipo != TIPO_RESULTADO:
+			usos[elemento.id] = int(usos.get(elemento.id, 0)) + 1
+			self.config.establecer("lanzador.usos", usos)
+		if elemento.tipo == TIPO_RESULTADO:
+			self.copiar_texto(elemento.destino)
+			self.hablar(_("Copiado {r}").format(r=elemento.destino), True)
+		elif elemento.tipo == TIPO_ACCION:
+			if elemento.destino.startswith("interfaz:"):
+				wx.CallAfter(self._abrir_desde_lanzador, elemento.destino[9:])
+			else:
+				self.ejecutar(elemento.destino)
+		elif not ejecutar_destino(elemento):
+			self.avisar(_("No se pudo abrir {n}.").format(n=elemento.nombre))
+
+	def _mostrar_area(self, indice: int) -> None:
+		if self.ventana:
+			self.ventana.restaurar()
+			wx.CallAfter(self.ventana.mostrar_area, indice)
+
+	def _abrir_desde_lanzador(self, orden: str) -> None:
+		if self.ventana:
+			self.ventana.restaurar()
+			wx.CallAfter(getattr(self.ventana, f"_al_{orden}"), None)
 
 	def _abrir_rapida(self, accion: str, destino: int) -> None:
 		if self.ventana:

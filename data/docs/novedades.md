@@ -1,5 +1,10 @@
 # Novedades de Centro de Mando
 
+## 2.2.0
+
+- **Lanzador** (Control+Alt+Windows+Espacio, o Archivo, Lanzador, Control+Mayúsculas+P): escriba y abra al momento cualquier programa instalado (de escritorio o de la Tienda), un ajuste de Windows o cualquier acción de Centro de Mando. Busca por trozos de palabras o iniciales, sin tildes, y lo más usado sube.
+- El lanzador también **calcula**: «15% de 80», «2+2*3», «raiz(2)»... Intro copia el resultado.
+
 ## 2.1.0
 
 - **Barra de menús nueva**, más corta y siempre igual: Archivo, Acción, Ir, Ver, Herramientas y Ayuda. El menú **Acción** cambia con el área en la que está y tiene las mismas órdenes que el menú contextual.

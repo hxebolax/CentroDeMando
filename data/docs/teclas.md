@@ -41,6 +41,10 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Control+Alt+Windows+F12: decir el estado del equipo.
 - Sin tecla de fábrica (asígnelas en Teclas globales): pegar el elemento 1 a 9 del historial, silenciar el sonido general, decir el estado del audio, bloquear el equipo y apagar la pantalla.
 
+## Globales: lanzador
+
+- Control+Alt+Windows+Espacio: lanzador (programas, ajustes, acciones y cálculos).
+
 ## Globales: información
 
 - Control+Alt+Windows+I: decir el escritorio actual.
@@ -50,7 +54,7 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 ## En la ventana principal
 
 - Alt+1 a Alt+7: áreas de escritorios, portapapeles, fragmentos, emoticonos, notificaciones, audio y sistema.
-- Control+E: al buscador del área. Control+L: lista rápida del área.
+- Control+E: al buscador del área. Control+L: lista rápida del área. Control+Mayúsculas+P: lanzador.
 - Alt+C: menú Acción (las órdenes del área actual).
 - Control+Tabulador: área siguiente.
 - F1: manual. Control+F1: esta lista. Control+H: ayuda del control enfocado.
@@ -116,6 +120,11 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 ## Sistema
 
 - Estado del equipo: Alt+E. Las órdenes de energía, en el menú Acción o con la tecla Aplicaciones.
+
+## Lanzador
+
+- Escribir: filtra al momento. Intro: abrir el primero. Flecha abajo: a la lista.
+- Alt+B: buscar. Alt+R: resultados. Intro en la lista: abrir el elegido.
 
 ## Ventanas rápidas (portapapeles, emoticonos, notificaciones y selector)
 

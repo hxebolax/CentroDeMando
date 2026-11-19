@@ -9,7 +9,7 @@ Para publicar una versión nueva solo se cambia ``APP_VERSION`` aquí.
 NOMBRE_APLICACION = "Centro de Mando"
 # Identificador sin espacios: ejecutable, instancia única, carpeta de compilación.
 ID_APLICACION = "CentroDeMando"
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 
 # Autoría (diálogo «Acerca de»).
 AUTOR = "Héctor J. Benítez Corredera"

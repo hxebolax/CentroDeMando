@@ -20,6 +20,7 @@ import wx
 from app.services import ventanas_win32 as w32
 from app.ui.area_emoticonos import AreaEmoticonos
 from app.ui.area_fragmentos import AreaFragmentos
+from app.ui.area_lanzador import AreaLanzador
 from app.ui.area_notificaciones import AreaNotificaciones
 from app.ui.area_portapapeles import AreaPortapapeles
 
@@ -138,3 +139,26 @@ class FragmentosRapido(VentanaRapida):
 		destino = self.destino
 		self.cerrar()
 		self.controlador.insertar_fragmento(fragmento, destino)
+
+
+class LanzadorRapido(VentanaRapida):
+	"""Lanzador y paleta de órdenes: Intro abre el programa, el ajuste o la acción."""
+
+	def __init__(self, controlador: Controlador, destino: int) -> None:
+		super().__init__(_("Lanzador"), controlador, destino)
+
+	def _crear_area(self) -> AreaLanzador:
+		return AreaLanzador(self, self.controlador, self._elegir)
+
+	def _elegir(self, elemento) -> None:
+		destino = self.destino
+		# Cálculos y acciones de Centro de Mando actúan sobre la ventana de la que se vino
+		# («mover la ventana activa», «pegar»...): primero se le devuelve el foco y se
+		# espera un momento a que Windows lo confirme. Programas y ajustes abren algo nuevo.
+		volver = elemento.tipo in ("Resultado", "Centro de Mando")
+		controlador = self.controlador
+		self.cerrar(devolver_foco=volver)
+		if volver:
+			wx.CallLater(200, controlador.ejecutar_elemento_lanzador, elemento, destino)
+		else:
+			controlador.ejecutar_elemento_lanzador(elemento, destino)

@@ -11,6 +11,7 @@ Centro de Mando reúne en un solo programa, accesible con lector de pantalla y m
 - **Fragmentos de texto**: firmas, direcciones o respuestas habituales que se insertan al instante.
 - **Audio**: dispositivo de salida, volumen general, volumen de cada aplicación y micrófono.
 - **Sistema**: estado del equipo y energía (bloquear, suspender, apagar con cuenta atrás...).
+- **Lanzador**: abrir al momento programas, ajustes de Windows y cualquier acción de Centro de Mando, y hacer cálculos.
 
 Vive en la bandeja del sistema y responde a teclas globales que funcionan desde cualquier programa. Todas se pueden cambiar.
 
@@ -40,7 +41,7 @@ Tiene siete áreas en pestañas. Para cambiar de área:
 
 La barra es siempre la misma:
 
-- **Archivo**: abrir la lista rápida del área (Control+L), exportar, ocultar en la bandeja y salir (Control+Q).
+- **Archivo**: lanzador (Control+Mayúsculas+P), abrir la lista rápida del área (Control+L), exportar, ocultar en la bandeja y salir (Control+Q).
 - **Acción**: las órdenes del área en la que está. Cambia al cambiar de pestaña y es igual que el menú contextual (tecla Aplicaciones). Las órdenes que dependen del elemento seleccionado solo están activas si hay uno.
 - **Ir**: las siete áreas y el buscador.
 - **Ver**: ventanas de todos los escritorios, barra de estado, decir el estado del área (Control+D) y actualizar (F5).
@@ -214,6 +215,19 @@ Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nomb
 **Estado del equipo** (Alt+E): batería (si la hay), procesador, memoria, disco del sistema, red y tiempo encendido. Se actualiza solo. Control+Alt+Windows+F12 lo dice desde cualquier programa.
 
 En el menú Acción y en el contextual: bloquear, suspender, hibernar, apagar la pantalla, apagar o reiniciar dentro de los minutos que elija (con el aviso de Windows), cancelar el apagado y mantener el equipo despierto. Bloquear y apagar la pantalla también tienen acción en Teclas globales, sin tecla de fábrica.
+
+## Lanzador
+
+Control+Alt+Windows+Espacio, desde cualquier programa (o Archivo, Lanzador, Control+Mayúsculas+P), abre una ventana para encontrar y abrir cualquier cosa escribiendo:
+
+- **Programas** instalados, de escritorio y de la Tienda: «bloc», «firefox», «config».
+- **Ajustes de Windows**: «wifi», «bluetooth», «sonido», «notificaciones», «actualizaciones», «administrador de dispositivos»...
+- **Acciones de Centro de Mando**: «crear escritorio», «micrófono», «emoticonos», «ver el área de audio», «opciones»... Así se pueden usar aunque no tengan tecla, y aprender las que sí la tienen.
+- **Cálculos**: «2+2*3», «15% de 80», «1,5*4», «raiz(2)», «7/2». El primer resultado es el valor; Intro lo copia al portapapeles.
+
+Se busca por trozos de palabras o por iniciales («adm disp» encuentra Administrador de dispositivos) y sin tildes. Al escribir se anuncia cuántos resultados hay y cuál es el primero. Intro en el buscador abre el primero; Flecha abajo baja a la lista **Resultados** (Alt+R), donde Intro abre el elegido. Lo que más usa aparece antes, y sin escribir nada se ven sus elementos más usados.
+
+Las acciones de Centro de Mando se ejecutan sobre la ventana en la que estaba (por ejemplo, «Mover la ventana activa al escritorio siguiente»).
 
 ## Teclas globales
 

@@ -123,6 +123,10 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"maximo": 5000,
 		"dias": 90,
 	},
+	"lanzador": {
+		# Veces que se ha abierto cada elemento: lo más usado sube en los resultados.
+		"usos": {},
+	},
 	"ventanas": {
 		# Al mover la ventana activa a otro escritorio, ir con ella.
 		"seguir_ventana": False,
