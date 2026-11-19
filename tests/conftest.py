@@ -19,6 +19,9 @@ import pytest
 RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
 	sys.path.insert(0, str(RAIZ))
+# Las pruebas del actualizador (plantilla del agente) importan su apoyo por nombre.
+if str(RAIZ / "tests") not in sys.path:
+	sys.path.append(str(RAIZ / "tests"))
 
 
 _CATALOGO = []

@@ -124,6 +124,12 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("ayuda_contextual", "Ayuda del control &enfocado\tCtrl+H", "Explica para qué sirve el control que tiene el foco.", wx.ITEM_NORMAL),
 			None,
 			(
+				"buscar_actualizaciones",
+				"&Buscar actualizaciones...",
+				"Comprueba si hay una versión nueva de Centro de Mando y la instala (fuente elegible en Opciones, Actualizaciones).",
+				wx.ITEM_NORMAL,
+			),
+			(
 				"invitar_cafe",
 				"&Invítame a un café si te gusta mi trabajo",
 				"Abre en el navegador la página de donaciones de PayPal del autor.",
@@ -1429,6 +1435,23 @@ class VentanaPrincipal(wx.Frame):
 		if not texto:
 			texto = _("No hay ayuda para este control. Pulse F1 para abrir el manual.")
 		mostrar_mensaje(self, texto, _("Ayuda"))
+
+	def _al_buscar_actualizaciones(self, _evento: wx.CommandEvent | None) -> None:
+		from app.ui import dialogo_actualizacion
+
+		dialogo_actualizacion.comprobar_manualmente(self, self.controlador.config_actualizador(), anunciar=self.controlador.hablar)
+
+	def iniciar_actualizaciones(self) -> None:
+		"""Tras arrancar: confirma la versión (vuelta atrás si una actualización falló) y comprueba de vez en cuando."""
+		from app.ui import dialogo_actualizacion
+
+		config = self.controlador.config_actualizador()
+		dialogo_actualizacion.al_arrancar(self, config, anunciar=self.controlador.hablar)
+		if self._config.obtener("actualizaciones.comprobar_automaticamente", True):
+			self._comprobador = dialogo_actualizacion.ComprobadorPeriodico(
+				self, config, intervalo_horas=float(self._config.obtener("actualizaciones.intervalo_horas", 24)), anunciar=self.controlador.hablar
+			)
+			self._comprobador.iniciar()
 
 	def _al_invitar_cafe(self, _evento: wx.CommandEvent | None) -> None:
 		import webbrowser

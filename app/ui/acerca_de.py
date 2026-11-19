@@ -15,7 +15,7 @@ import sys
 import wx
 
 from app.core import paths
-from app.core.version import ANIO_COPYRIGHT, APP_VERSION, AUTOR, NOMBRE_APLICACION
+from app.core.version import ANIO_COPYRIGHT, APP_VERSION, AUTOR, LICENCIA, NOMBRE_APLICACION
 from app.ui.dialogo_texto import mostrar_texto
 
 
@@ -31,6 +31,7 @@ def texto_acerca_de() -> str:
 		_("Versión: {version}").format(version=APP_VERSION),
 		_("Autor: {autor}").format(autor=AUTOR),
 		_("Copyright (C) {anio} {autor}").format(anio=ANIO_COPYRIGHT, autor=AUTOR),
+		_("Licencia: {licencia}").format(licencia=LICENCIA),
 		"",
 		_(
 			"Centro de mando accesible para Windows: escritorios virtuales, historial del portapapeles, "

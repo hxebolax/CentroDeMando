@@ -2,8 +2,9 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 2.4.0
+- Versión: 1.0.0
 - Autor: Héctor J. Benítez Corredera
+- Licencia: [GPL-3.0](LICENSE)
 - Plataforma: Windows 10 y 11 de 64 bits
 - Idioma: español
 
@@ -79,6 +80,14 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 2. Abra `CentroDeMando.exe`.
 3. Para el historial de notificaciones, permita en Windows que las aplicaciones lean las notificaciones: Configuración, Privacidad y seguridad, Notificaciones (en el área de notificaciones, menú Acción, Permiso de Windows lleva allí).
 
+### Actualizaciones
+
+Ayuda, Buscar actualizaciones (y una comprobación automática que se puede desactivar). En Opciones, Actualizaciones, se elige la fuente: el servidor del autor, las [releases de GitHub](https://github.com/hxebolax/CentroDeMando/releases), las dos o una dirección propia. Cada versión va firmada digitalmente: una manipulada se rechaza. Se actualiza sin tocar la configuración ni los historiales y, si algo sale mal, vuelve sola a la versión anterior.
+
+### Descarga
+
+- Última versión: [releases de GitHub](https://github.com/hxebolax/CentroDeMando/releases/latest) o el servidor del autor.
+
 ### Documentación
 
 - Manual completo: F1 dentro del programa, o [data/docs/manual.md](data/docs/manual.md).
@@ -134,6 +143,7 @@ app/services/               Lógica sin wx
   notificaciones.py         Fuente WinRT, historial SQLite y servicio de sondeo
   ventanas_win32.py         Utilidades Win32 de ventanas y foco
   sistema.py                Inicio con Windows y tonos
+  actualizador.py           Actualizaciones firmadas: varias fuentes, verificación, sustitución y vuelta atrás
 app/ui/                     Interfaz wxPython
   ventana_principal.py      Ventana con cuatro áreas, menús y bandeja
   controlador.py            Une servicios, teclas, voz e interfaz
@@ -144,6 +154,8 @@ app/ui/                     Interfaz wxPython
 data/docs/                  Manual, teclas y novedades (se distribuyen)
 data/emojis/                Datos de emoticonos en español (se distribuyen)
 tools/generar_emojis.py     Genera data/emojis/emojis_es.json
+tools/firmar_version.py     Claves y firma Ed25519 del version.json
+tools/publicar.py           Empaqueta, firma y publica en el servidor y en GitHub
 tests/                      Pruebas pytest (sin tocar data real ni el portapapeles real)
 ```
 
@@ -182,6 +194,22 @@ Para regenerar los datos de emoticonos tras descargar versiones nuevas de CLDR y
 python tools/generar_emojis.py --origen adjuntos/datos_emoji
 ```
 
+### Publicar una versión
+
+1. Suba `APP_VERSION` en `app/core/version.py` (y en `pyproject.toml`) y escriba sus novedades en `data/docs/novedades.md` bajo `## <versión>`.
+2. `entorno.bat compilar` (desde cero).
+3. Empaquetar, firmar y publicar:
+
+```bash
+.venv\Scripts\python.exe tools\publicar.py --servidor --github
+```
+
+`tools/publicar.py` crea `dist/CentroDeMando_v<versión>.zip` (todo dentro de la carpeta `CentroDeMando`) y `dist/version.json` con `app`, `version`, `file`, `sha256`, `size`, `date` y `novedades`, lo firma con Ed25519 (`tools/firmar_version.py`) y comprueba la firma con la clave pública del programa. Con `--servidor` copia primero el ZIP y después `version.json` a la carpeta web del servidor; con `--github` crea la release `v<versión>` con los dos archivos.
+
+La clave privada está en `tools/claves/` y **nunca** se sube al repositorio ni al servidor (`.gitignore` la excluye). Sin ella no se pueden publicar versiones que acepten las instalaciones: guarde una copia fuera del equipo.
+
+El actualizador (`app/services/actualizador.py`, del agente «actualizador») verifica la firma antes de leer nada, rechaza versiones anteriores a la ya confirmada en el equipo, extrae el ZIP con comprobaciones de seguridad y sustituye el programa con un `.bat` que hace copia de seguridad, no toca `data` salvo los recursos (`docs`, `emojis`...) y vuelve atrás si la versión nueva no confirma su arranque.
+
 ### Pruebas
 
 ```bash
@@ -190,7 +218,11 @@ python tools/generar_emojis.py --origen adjuntos/datos_emoji
 
 Las pruebas usan una carpeta `data` temporal (`APP_DATA_DIR`), un motor de escritorios simulado y una fuente de notificaciones simulada, y no muestran ventanas.
 
+### Licencia
+
+Centro de Mando es software libre bajo la [Licencia Pública General de GNU, versión 3](LICENSE).
+
 ### Licencias de terceros
 
 - Datos de emoticonos: Unicode License V3 (`data/emojis/LICENCIA_UNICODE.txt`).
-- pyvda (MIT), comtypes (MIT), wxPython (wxWindows Library Licence), winrt (MIT), accessible_output2 (MIT), pycaw (MIT), psutil (BSD).
+- pyvda (MIT), comtypes (MIT), wxPython (wxWindows Library Licence), winrt (MIT), accessible_output2 (MIT), pycaw (MIT), psutil (BSD), cryptography (Apache 2.0 o BSD).

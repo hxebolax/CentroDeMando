@@ -9,10 +9,11 @@ Para publicar una versión nueva solo se cambia ``APP_VERSION`` aquí.
 NOMBRE_APLICACION = "Centro de Mando"
 # Identificador sin espacios: ejecutable, instancia única, carpeta de compilación.
 ID_APLICACION = "CentroDeMando"
-APP_VERSION = "2.4.0"
+APP_VERSION = "1.0.0"
 
 # Autoría (diálogo «Acerca de»).
 AUTOR = "Héctor J. Benítez Corredera"
 ANIO_COPYRIGHT = "2026"
+LICENCIA = "GPL-3.0 (Licencia Pública General de GNU, versión 3)"
 # Ayuda, Invítame a un café.
 URL_DONACIONES = "https://www.paypal.com/paypalme/hjbcdonaciones?country.x=ES&locale.x=es_ES"

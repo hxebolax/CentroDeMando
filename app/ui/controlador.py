@@ -709,6 +709,20 @@ class Controlador:
 			log.exception("No se pudo abrir la configuración de privacidad")
 		self.notificaciones.consultar_ya()
 
+	# ── Actualizaciones ─────────────────────────────────────────────────────
+
+	def config_actualizador(self):
+		"""Configuración del actualizador con las fuentes elegidas en Opciones (se lee en cada uso)."""
+		from app.core.version import APP_VERSION
+		from app.services import actualizador
+
+		config = actualizador.configuracion_por_defecto(APP_VERSION)
+		config.extra["urls"] = actualizador.urls_de_fuente(
+			str(self.config.obtener("actualizaciones.fuente", "ambos")),
+			str(self.config.obtener("actualizaciones.url_personalizada", "")),
+		)
+		return config
+
 	# ── Temporizadores ──────────────────────────────────────────────────────
 
 	@property

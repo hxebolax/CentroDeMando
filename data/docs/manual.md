@@ -48,7 +48,7 @@ La barra es siempre la misma:
 - **Ir**: las nueve áreas y el buscador.
 - **Ver**: ventanas de todos los escritorios, barra de estado, decir el estado del área (Control+D) y actualizar (F5).
 - **Herramientas**: teclas globales (Control+T), reglas de ventanas (Control+R), opciones (Control+coma) y las carpetas de datos y registros.
-- **Ayuda**: manual (F1), lista de teclas (Control+F1), novedades, ayuda del control (Control+H), invitar a un café y Acerca de.
+- **Ayuda**: manual (F1), lista de teclas (Control+F1), novedades, ayuda del control (Control+H), buscar actualizaciones, invitar a un café y Acerca de.
 
 Escape, Alt+F4 o minimizar ocultan la ventana en la bandeja: Centro de Mando sigue funcionando. Para cerrarlo del todo use Archivo, Salir (Control+Q).
 
@@ -292,6 +292,7 @@ Herramientas, Opciones (Control+coma), con pestañas:
 - **Emoticonos**: forma de insertar, tono de piel, mostrar el carácter y cuántos recientes se recuerdan.
 - **Notificaciones**: guardar o no, cada cuánto se consulta, anunciar las nuevas, marcar como leídas, aplicaciones ignoradas, máximo y días.
 - **Ventanas**: seguir a la ventana al moverla y aplicar las reglas al iniciar.
+- **Actualizaciones**: de dónde buscarlas y cada cuánto.
 - **Avanzado**: hacer cíclicas las teclas de Windows, sondeo de escritorios y nivel de registro.
 
 Los cambios se aplican al momento.
@@ -301,6 +302,23 @@ Los cambios se aplican al momento.
 Windows+B lleva a la bandeja. El lector dice el nombre del programa, el escritorio actual y, si las hay, las notificaciones sin leer. Intro muestra la ventana; la tecla Aplicaciones abre un menú con los escritorios, el historial del portapapeles, los emoticonos, el historial de notificaciones, las teclas globales, las opciones y Salir.
 
 Si la bandeja oculta el icono, Control+Alt+Windows+G muestra la ventana.
+
+## Actualizaciones
+
+Ayuda, **Buscar actualizaciones**, comprueba si hay una versión nueva. Si la hay, muestra sus novedades y ofrece **Actualizar ahora**, **Más tarde** u **Omitir esta versión**. Al actualizar:
+
+1. Se descarga el paquete (se anuncia el progreso cada cuarto) y se comprueba su firma digital y su huella.
+2. Centro de Mando se cierra solo, se sustituye el programa y vuelve a abrirse.
+3. Su configuración, sus historiales y sus fragmentos no se tocan.
+4. Si la versión nueva no arrancara bien, se vuelve sola a la anterior y se le avisa.
+
+En Opciones, pestaña **Actualizaciones**:
+
+- **Buscar actualizaciones en**: los dos (primero el servidor del autor y, si no responde, GitHub), solo el servidor del autor, solo GitHub o una dirección personalizada. Venga de donde venga, la versión se comprueba con la firma del autor: una versión manipulada se rechaza.
+- **Dirección personalizada** del `version.json`, si elige esa opción.
+- **Comprobar automáticamente** al poco de arrancar y cada cierto número de **horas**. Nunca instala nada sin preguntar.
+
+Las actualizaciones solo se instalan en la versión compilada (`CentroDeMando.exe`).
 
 ## Acerca de e invitar a un café
 

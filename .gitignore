@@ -26,3 +26,8 @@ data/downloads/
 
 # Material de consulta (repositorios clonados, datos de referencia): no forma parte del programa.
 adjuntos/
+
+# Clave privada de firma de versiones: jamás al repositorio.
+tools/claves/
+# Paquetes de publicación.
+dist/

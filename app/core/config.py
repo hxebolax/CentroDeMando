@@ -125,6 +125,13 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"maximo": 5000,
 		"dias": 90,
 	},
+	"actualizaciones": {
+		# servidor | github | ambos (servidor y, si falla, GitHub) | personalizada
+		"fuente": "ambos",
+		"url_personalizada": "",
+		"comprobar_automaticamente": True,
+		"intervalo_horas": 24,
+	},
 	"lanzador": {
 		# Veces que se ha abierto cada elemento: lo más usado sube en los resultados.
 		"usos": {},

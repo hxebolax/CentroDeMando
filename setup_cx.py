@@ -43,6 +43,7 @@ PAQUETES = [
 	"comtypes",
 	"pycaw",
 	"psutil",
+	"cryptography",
 	"winrt",
 	"winrt.runtime",
 	"winrt.system",

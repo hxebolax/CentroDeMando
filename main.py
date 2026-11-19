@@ -202,6 +202,9 @@ def _principal(argumentos: list[str]) -> int:
 		oculta = desde_windows or configuracion.obtener("general.iniciar_en_bandeja", False)
 		if not (oculta and ventana.ocultar_en_bandeja(avisar=not desde_windows)):
 			ventana.mostrar()
+		# Después de mostrar (u ocultar en la bandeja): confirma que esta versión arranca
+		# bien (si no, el actualizador vuelve a la anterior) y busca versiones nuevas.
+		ventana.iniciar_actualizaciones()
 
 	log.info("Arranque completado en %.2f s.", time.perf_counter() - inicio)
 	aplicacion.MainLoop()

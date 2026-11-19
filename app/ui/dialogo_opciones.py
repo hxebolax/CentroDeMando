@@ -348,6 +348,39 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 		],
 	),
 	(
+		"Actualizaciones",
+		[
+			Opcion(
+				"actualizaciones.fuente",
+				"&Buscar actualizaciones en:",
+				"El servidor del autor, las publicaciones de GitHub, los dos (primero el servidor y, si no responde, GitHub) o una dirección propia. "
+				"Venga de donde venga, la versión se comprueba con su firma digital antes de instalarla.",
+				"elegir",
+				opciones=("Los dos: servidor del autor y GitHub", "Solo el servidor del autor", "Solo GitHub", "Una dirección personalizada"),
+				valores=("ambos", "servidor", "github", "personalizada"),
+			),
+			Opcion(
+				"actualizaciones.url_personalizada",
+				"&Dirección personalizada del version.json (https):",
+				"Solo con «Una dirección personalizada». Debe publicar un version.json firmado por el autor; si no, se rechaza.",
+				"texto",
+			),
+			Opcion(
+				"actualizaciones.comprobar_automaticamente",
+				"Comprobar au&tomáticamente si hay versiones nuevas",
+				"Al poco de arrancar y después cada cierto tiempo. Siempre pregunta antes de instalar nada.",
+			),
+			Opcion(
+				"actualizaciones.intervalo_horas",
+				"Comprobar cada estas &horas:",
+				"Cada cuánto se comprueba mientras el programa sigue abierto.",
+				"int",
+				1,
+				168,
+			),
+		],
+	),
+	(
 		"Avanzado",
 		[
 			Opcion(
