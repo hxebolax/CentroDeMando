@@ -102,6 +102,25 @@ def contar_ventanas(cuantas: int) -> str:
 	return _("1 ventana") if cuantas == 1 else _("{n} ventanas").format(n=cuantas)
 
 
+ACCIONES_AUDIO_GENERAL = (
+	"audio_siguiente_salida",
+	"audio_subir",
+	"audio_bajar",
+	"audio_silenciar",
+	"audio_microfono",
+	"decir_audio",
+	"audio_micro_subir",
+	"audio_micro_bajar",
+	"audio_micro_escuchar",
+	"audio_micro_decir",
+	"audio_balance_izquierda",
+	"audio_balance_derecha",
+	"audio_balance_centrar",
+	"audio_perfil_siguiente",
+	"decir_privacidad",
+)
+
+
 def describir_ventanas(ventanas: list[InfoVentana], maximo: int = 10) -> str:
 	"""«3 ventanas: Correo, Documento, Navegador» (función pura)."""
 	if not ventanas:
@@ -135,6 +154,7 @@ class Controlador:
 		self._oyentes_notificaciones: list[Callable[[], None]] = []
 		self._oyentes_no_molestar: list[Callable[[bool], None]] = []
 		self._temporizador_no_molestar = None
+		self._temporizador_micro = None
 		self.notificaciones.al_nuevas = lambda nuevas: wx.CallAfter(self._al_notificaciones, nuevas)
 		self.notificaciones.al_cambiar_acceso = lambda acceso: wx.CallAfter(self._al_cambiar_acceso, acceso)
 		self.teclas = GestorTeclasGlobales(self.ejecutar) if con_teclas else None
@@ -160,6 +180,15 @@ class Controlador:
 		self.temporizadores.iniciar()
 		self._iniciar_vigilante_audio()
 		wx.CallAfter(self._vigilar_no_molestar)
+		wx.CallAfter(self._vigilar_microfono)
+		if self.config.obtener("audio.silenciar_micro_al_iniciar", False):
+			from app.services import audio
+
+			try:
+				audio.poner_silencio_entrada(True)
+				log.info("Micrófono silenciado al arrancar (opción).")
+			except Exception:  # noqa: BLE001
+				log.warning("No se pudo silenciar el micrófono al arrancar", exc_info=True)
 		try:
 			self.notificaciones.iniciar()
 		except Exception:  # noqa: BLE001 - sin notificaciones, el resto sigue funcionando
@@ -174,9 +203,11 @@ class Controlador:
 			self.teclas.interceptar_flechas_nativas(bool(self.config.obtener("escritorios.interceptar_flechas_nativas", False)))
 
 	def detener(self) -> None:
-		if self._temporizador_no_molestar is not None:
-			self._temporizador_no_molestar.Stop()
-			self._temporizador_no_molestar = None
+		for nombre in ("_temporizador_no_molestar", "_temporizador_micro"):
+			temporizador = getattr(self, nombre, None)
+			if temporizador is not None:
+				temporizador.Stop()
+				setattr(self, nombre, None)
 		if self.teclas is not None:
 			self.teclas.detener()
 		self.servicio.detener()
@@ -425,7 +456,7 @@ class Controlador:
 			# El destino es la ventana que tiene el foco AHORA.
 			destino = w32.ventana_activa()
 			wx.CallAfter(self.pegar_reciente, int(accion[15:]), destino)
-		elif accion in ("audio_siguiente_salida", "audio_subir", "audio_bajar", "audio_silenciar", "audio_microfono", "decir_audio"):
+		elif accion in ACCIONES_AUDIO_GENERAL:
 			metodo = {
 				"audio_siguiente_salida": self.siguiente_salida_audio,
 				"audio_subir": lambda: self.volumen_general(5),
@@ -433,6 +464,15 @@ class Controlador:
 				"audio_silenciar": self.silenciar_general,
 				"audio_microfono": self.silenciar_microfono,
 				"decir_audio": self.decir_audio,
+				"audio_micro_subir": lambda: self.volumen_microfono(5),
+				"audio_micro_bajar": lambda: self.volumen_microfono(-5),
+				"audio_micro_escuchar": self.escuchar_microfono,
+				"audio_micro_decir": self.decir_microfono,
+				"audio_balance_izquierda": lambda: self.mover_balance(-10),
+				"audio_balance_derecha": lambda: self.mover_balance(10),
+				"audio_balance_centrar": lambda: self.mover_balance(None),
+				"audio_perfil_siguiente": self.siguiente_perfil_audio,
+				"decir_privacidad": self.decir_privacidad,
 			}[accion]
 			wx.CallAfter(metodo)
 		elif accion in ("audio_app_subir", "audio_app_bajar", "audio_app_silenciar", "audio_app_decir", "audio_solo_app", "audio_app_salida"):
@@ -754,6 +794,119 @@ class Controlador:
 		from app.services import audio
 
 		self._audio(lambda: _("Micrófono silenciado") if audio.alternar_microfono() else _("Micrófono activado"))
+
+	def volumen_microfono(self, paso: int) -> None:
+		from app.services import audio
+
+		def cambiar() -> str:
+			nuevo = audio.cambiar_volumen_entrada(paso)
+			self.fijar_volumen_micro_bloqueado(nuevo)
+			return _("Micrófono {v} %").format(v=nuevo)
+
+		self._audio(cambiar)
+
+	def fijar_volumen_micro_bloqueado(self, volumen: int) -> None:
+		"""Si el micrófono está bloqueado, lo que la persona elige pasa a ser el volumen fijo."""
+		if not self.config.obtener("audio.bloquear_micro", False):
+			return
+		self.config.establecer("audio.volumen_micro_bloqueado", int(volumen))
+		pendiente = getattr(self, "_guardado_micro", None)
+		if pendiente is not None and pendiente.IsRunning():
+			pendiente.Restart(1000)
+		else:
+			self._guardado_micro = wx.CallLater(1000, self.config.guardar)
+
+	def escuchar_microfono(self) -> None:
+		from app.services import audio
+
+		self._audio(audio.alternar_escucha_predeterminada)
+
+	def decir_microfono(self) -> None:
+		from app.services import audio
+
+		def texto() -> str:
+			micro = next((d for d in audio.dispositivos_entrada() if d.predeterminado), None)
+			if micro is None:
+				return _("No hay ningún micrófono.")
+			volumen, silencio = audio.volumen_entrada(micro.id)
+			escucha, _destino = audio.leer_escucha(micro.id)
+			return _("{m}, volumen {v} %{s}{e}").format(
+				m=micro.nombre, v=volumen, s=_(", silenciado") if silencio else "", e=_(", se está escuchando") if escucha else ""
+			)
+
+		self._audio(texto)
+
+	def mover_balance(self, paso: int | None) -> None:
+		"""``None`` centra; un número inclina el balance tantos puntos."""
+		from app.services import audio
+
+		def cambiar() -> str:
+			actual = audio.balance_general()
+			if actual is None:
+				raise audio.ErrorAudio(_("El balance solo se puede cambiar en salidas estéreo (dos canales)."))
+			return _("Balance: {b}").format(b=audio.describir_balance(audio.poner_balance_general(0 if paso is None else actual + paso)))
+
+		self._audio(cambiar)
+
+	# ── Perfiles de audio, privacidad y micrófono fijo ──────────────────────
+
+	def perfiles_audio(self) -> list:
+		from app.services import perfiles_audio
+
+		return perfiles_audio.cargar(self.config.obtener("audio.perfiles", []))
+
+	def guardar_perfiles_audio(self, perfiles: list) -> None:
+		self.config.establecer("audio.perfiles", [p.a_dict() for p in perfiles])
+		self.config.guardar()
+
+	def aplicar_perfil_audio(self, perfil) -> None:
+		from app.services import perfiles_audio
+
+		def aplicar() -> str:
+			faltan = perfiles_audio.aplicar(perfil)
+			self.config.establecer("audio.ultimo_perfil", perfil.nombre)
+			self.config.guardar()
+			texto = _("Perfil {p}").format(p=perfil.nombre)
+			if faltan:
+				texto += ". " + _("No está conectado: {f}").format(f=", ".join(faltan))
+			return texto
+
+		self._audio(aplicar)
+
+	def siguiente_perfil_audio(self) -> None:
+		from app.services import perfiles_audio
+
+		perfil = perfiles_audio.siguiente(self.perfiles_audio(), str(self.config.obtener("audio.ultimo_perfil", "")))
+		if perfil is None:
+			self.avisar(_("No hay perfiles de audio. Guárdelos en el área de audio, menú Acción."))
+			return
+		self.aplicar_perfil_audio(perfil)
+
+	def decir_privacidad(self) -> None:
+		from app.services import audio
+
+		microfono = audio.apps_usando("microphone")
+		camara = audio.apps_usando("webcam")
+		partes = [
+			_("Micrófono: {a}").format(a=", ".join(microfono)) if microfono else _("Nadie usa el micrófono"),
+			_("Cámara: {a}").format(a=", ".join(camara)) if camara else _("nadie usa la cámara"),
+		]
+		self.hablar(". ".join(partes), True)
+
+	def _vigilar_microfono(self) -> None:
+		"""Cada 2 segundos, si está pedido, devuelve el micrófono a su volumen fijo."""
+		from app.services import audio
+
+		if self.config.obtener("audio.bloquear_micro", False):
+			objetivo = min(max(int(self.config.obtener("audio.volumen_micro_bloqueado", 80)), 0), 100)
+			try:
+				actual = audio.volumen_entrada()[0]
+				if actual != objetivo:
+					audio.poner_volumen_entrada(objetivo)
+					log.info("Volumen del micrófono devuelto de %s %% a %s %%", actual, objetivo)
+			except Exception:  # noqa: BLE001 - sin micrófono o desconectado
+				log.debug("No se pudo vigilar el volumen del micrófono", exc_info=True)
+		self._temporizador_micro = wx.CallLater(2000, self._vigilar_microfono)
 
 	def decir_audio(self) -> None:
 		from app.services import audio

@@ -127,8 +127,12 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 ## Audio
 
 - Lista de dispositivos (Alt+D): Intro lo pone como salida predeterminada.
-- Volumen general (Alt+G): flechas, RePág y AvPág.
+- Volumen general (Alt+G): flechas, RePág y AvPág. Silenciar el sonido general: Alt+N.
+- Balance (Alt+B): flechas, RePág y AvPág; negativo a la izquierda, positivo a la derecha.
 - Lista de aplicaciones (Alt+S): Más y Menos o Control+flechas arriba y abajo cambian el volumen; Espacio silencia.
+- Volumen de la aplicación seleccionada (Alt+P) y Silenciar la aplicación (Alt+R).
+- Lista de micrófonos (Alt+F): Intro lo pone como predeterminado.
+- Volumen del micrófono (Alt+M), Silenciar el micrófono (Alt+E), Escuchar este dispositivo (Alt+T) y Oír el micrófono por (Alt+O).
 
 ## Sistema
 

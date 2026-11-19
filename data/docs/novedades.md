@@ -1,5 +1,19 @@
 # Novedades de Centro de Mando
 
+## 1.2.0
+
+Audio, mucho más completo:
+
+- **Volumen y silencio de la aplicación seleccionada** en el área de audio, con un deslizador y una casilla como los generales (Alt+P y Alt+R). Y una casilla para **silenciar el sonido general** (Alt+N).
+- **Micrófonos**: lista de micrófonos (Intro lo pone como predeterminado), **volumen del micrófono**, silencio y **Escuchar este dispositivo** para oírlo por los auriculares o altavoces, eligiendo por cuál. Funciona sin permisos de administrador.
+- **Balance** izquierda y derecha de la salida (Alt+B), también con teclas globales.
+- **Dispositivo de comunicaciones** aparte, de salida y de micrófono: la música por un sitio y las llamadas por otro.
+- **Perfiles de audio**: guarde salidas, micrófonos y volúmenes con un nombre y aplíquelos de una vez, también con una tecla global que pasa al siguiente.
+- **Bloquear el volumen del micrófono** para que Teams, el navegador u otros programas no lo cambien, y **silenciar el micrófono al arrancar** (Opciones, Audio).
+- **Quién usa el micrófono o la cámara**, en el menú Acción y con tecla global.
+- Nuevas teclas globales, sin tecla de fábrica para no ocupar combinaciones: subir y bajar el micrófono, escucharlo, decir su estado, balance, siguiente perfil y privacidad.
+- El área de audio se actualiza sola cada dos segundos mientras está a la vista.
+
 ## 1.1.0
 
 Correcciones:

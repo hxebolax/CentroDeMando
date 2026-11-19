@@ -354,6 +354,36 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 		],
 	),
 	(
+		"Audio",
+		[
+			Opcion(
+				"audio.bloquear_micro",
+				"&Bloquear el volumen del micrófono",
+				"Si otro programa (Teams, el navegador, un controlador) cambia el volumen del micrófono predeterminado, "
+				"Centro de Mando lo devuelve al de abajo en un par de segundos.",
+			),
+			Opcion(
+				"audio.volumen_micro_bloqueado",
+				"&Volumen fijo del micrófono:",
+				"Volumen al que se devuelve el micrófono cuando está bloqueado.",
+				"int",
+				0,
+				100,
+			),
+			Opcion(
+				"audio.silenciar_micro_al_iniciar",
+				"&Silenciar el micrófono al arrancar",
+				"Al abrir Centro de Mando (por ejemplo al iniciar Windows) el micrófono predeterminado queda silenciado. Control+Alt+Windows+M lo activa.",
+			),
+			Opcion(
+				"",
+				"Los perfiles de audio se guardan y se aplican en el área de audio, menú Acción; la tecla global «Aplicar el siguiente perfil de audio» se asigna en Teclas globales.",
+				"",
+				"nota",
+			),
+		],
+	),
+	(
 		"No molestar",
 		[
 			Opcion(

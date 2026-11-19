@@ -29,6 +29,25 @@ def audio_falso(monkeypatch):
 		return estado["sesiones"][clave][0]
 
 	monkeypatch.setattr(audio, "cambiar_volumen_sesion", cambiar)
+	monkeypatch.setattr(audio, "poner_volumen_sesion", lambda clave, v: estado["sesiones"][clave].__setitem__(0, v) or v)
+	monkeypatch.setattr(audio, "poner_silencio_sesion", lambda clave, s: estado["sesiones"][clave].__setitem__(1, s) or s)
+	monkeypatch.setattr(audio, "poner_silencio_general", lambda s: estado.__setitem__("silencio", s) or s)
+	estado["micros"] = {"m1": [70, False, False, ""]}
+	monkeypatch.setattr(audio, "dispositivos_entrada", lambda: [audio.Dispositivo("m1", "Micrófono USB", True)])
+	monkeypatch.setattr(audio, "volumen_entrada", lambda i=None: tuple(estado["micros"][i or "m1"][:2]))
+	monkeypatch.setattr(audio, "leer_escucha", lambda i: tuple(estado["micros"][i][2:]))
+	monkeypatch.setattr(audio, "poner_volumen_entrada", lambda v, i=None: estado["micros"][i].__setitem__(0, v) or v)
+	monkeypatch.setattr(audio, "poner_silencio_entrada", lambda s, i=None: estado["micros"][i].__setitem__(1, s) or s)
+
+	def escuchar(i, activar, destino=None):
+		estado["micros"][i][2] = activar
+		if destino is not None:
+			estado["micros"][i][3] = destino
+
+	monkeypatch.setattr(audio, "poner_escucha", escuchar)
+	estado["balance"] = 0
+	monkeypatch.setattr(audio, "balance_general", lambda: estado["balance"])
+	monkeypatch.setattr(audio, "poner_balance_general", lambda b: estado.__setitem__("balance", b) or b)
 	return estado
 
 
@@ -52,7 +71,44 @@ def test_area_audio(controlador_falso, audio_falso, monkeypatch):
 		assert area.manejar_tecla(evento)
 		assert audio_falso["sesiones"]["s1"][0] == 55
 		assert area.acciones()[0][2] is True
+		# Deslizador y casilla de la aplicación seleccionada.
+		area.refrescar()
+		assert area.volumen_app.IsEnabled() and area.volumen_app.GetValue() == 55
+		area.volumen_app.SetValue(20)
+		area._al_mover_volumen_app(wx.CommandEvent())
+		assert audio_falso["sesiones"]["s1"][0] == 20
+		area.silencio_app.SetValue(True)
+		area._al_silencio_app(wx.CommandEvent())
+		assert audio_falso["sesiones"]["s1"][1] is True
+		area.silencio_general.SetValue(True)
+		area._al_silencio_general(wx.CommandEvent())
+		assert audio_falso["silencio"] is True
+		# Micrófono: volumen, silencio y escuchar por la segunda salida.
+		assert area.volumen_micro.GetValue() == 70
+		area.volumen_micro.SetValue(35)
+		area._al_mover_volumen_micro(wx.CommandEvent())
+		area.silencio_micro.SetValue(True)
+		area._al_silencio_micro(wx.CommandEvent())
+		area.escuchar_por.SetSelection(2)
+		area.escuchar.SetValue(True)
+		evento = wx.CommandEvent(wx.wxEVT_CHECKBOX, area.escuchar.GetId())
+		evento.SetEventObject(area.escuchar)
+		area._al_escuchar(evento)
+		assert audio_falso["micros"]["m1"] == [35, True, True, "b"]
+		area.alternar_escucha()
+		assert audio_falso["micros"]["m1"][2] is False
+		# Balance.
+		assert area.balance.IsEnabled()
+		area.balance.SetValue(-30)
+		area._al_mover_balance(wx.CommandEvent())
+		assert audio_falso["balance"] == -30
+		etiquetas = [e[0] for e in area.acciones() if e]
+		limpias = [e.replace("&", "") for e in etiquetas]
+		assert any("perfil" in e for e in limpias) and any("comunicaciones" in e for e in limpias)
+		letras = [e[e.index("&") + 1].lower() for e in etiquetas if "&" in e]
+		assert len(letras) == len(set(letras)), letras
 	finally:
+		area._temporizador.Stop()
 		marco.Destroy()
 
 

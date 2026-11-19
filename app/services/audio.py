@@ -20,6 +20,17 @@ class Dispositivo:
 	id: str
 	nombre: str
 	predeterminado: bool = False
+	# Dispositivo de comunicaciones (llamadas: Teams, WhatsApp, Discord...).
+	comunicaciones: bool = False
+
+	def estado(self) -> str:
+		"""«predeterminado», «comunicaciones», los dos o nada (lo que se ve en la lista)."""
+		partes = []
+		if self.predeterminado:
+			partes.append("predeterminado")
+		if self.comunicaciones:
+			partes.append("comunicaciones")
+		return " y ".join(partes)
 
 
 @dataclass(frozen=True)
@@ -46,6 +57,15 @@ def _pycaw():
 	return AudioUtilities, EDataFlow, ERole, DEVICE_STATE
 
 
+def _id_predeterminado(flujo: int, comunicaciones: bool) -> str:
+	utilidades, _flujos, roles, _estados = _pycaw()
+	rol = roles.eCommunications.value if comunicaciones else roles.eMultimedia.value
+	try:
+		return utilidades.GetDeviceEnumerator().GetDefaultAudioEndpoint(flujo, rol).GetId()
+	except Exception:  # noqa: BLE001 - no hay ninguno de ese tipo
+		return ""
+
+
 def _predeterminado(flujo: int):
 	utilidades, _flujos, roles, _estados = _pycaw()
 	enumerador = utilidades.GetDeviceEnumerator()
@@ -58,14 +78,22 @@ def _predeterminado(flujo: int):
 
 def dispositivos_salida() -> list[Dispositivo]:
 	utilidades, flujos, _roles, estados = _pycaw()
-	try:
-		actual = _predeterminado(flujos.eRender.value).id
-	except ErrorAudio:
-		actual = ""
+	actual = _id_predeterminado(flujos.eRender.value, False)
+	llamadas = _id_predeterminado(flujos.eRender.value, True)
 	return [
-		Dispositivo(d.id, d.FriendlyName or d.id, d.id == actual)
+		Dispositivo(d.id, d.FriendlyName or d.id, d.id == actual, d.id == llamadas)
 		for d in utilidades.GetAllDevices(flujos.eRender.value, estados.ACTIVE.value)
 	]
+
+
+def poner_comunicaciones(dispositivo: Dispositivo) -> None:
+	"""Dispositivo SOLO para comunicaciones (llamadas); el predeterminado no cambia."""
+	utilidades, _flujos, roles, _estados = _pycaw()
+	try:
+		utilidades.SetDefaultDevice(dispositivo.id, [roles.eCommunications])
+	except Exception as error:  # noqa: BLE001
+		log.warning("No se pudo cambiar el dispositivo de comunicaciones", exc_info=True)
+		raise ErrorAudio("Windows no dejó cambiar el dispositivo de comunicaciones.") from error
 
 
 def poner_predeterminado(dispositivo: Dispositivo) -> None:
@@ -188,6 +216,18 @@ def cambiar_volumen_sesion(clave: str, paso: int) -> int:
 	nuevo = min(max(round(simple.GetMasterVolume() * 100) + paso, 0), 100)
 	simple.SetMasterVolume(nuevo / 100, None)
 	return nuevo
+
+
+def poner_volumen_sesion(clave: str, porcentaje: int) -> int:
+	"""Pone el volumen de la aplicación (0-100) y lo devuelve."""
+	porcentaje = min(max(int(porcentaje), 0), 100)
+	_sesion(clave).SimpleAudioVolume.SetMasterVolume(porcentaje / 100, None)
+	return porcentaje
+
+
+def poner_silencio_sesion(clave: str, silenciar: bool) -> bool:
+	_sesion(clave).SimpleAudioVolume.SetMute(bool(silenciar), None)
+	return bool(silenciar)
 
 
 def alternar_silencio_sesion(clave: str) -> bool:
@@ -419,6 +459,325 @@ def salida_de_sesion(sesion: Sesion) -> str:
 def poner_salida_de_sesion(sesion: Sesion, dispositivo: Dispositivo | None) -> None:
 	"""Hace que la aplicación suene por ``dispositivo`` (``None`` = la salida predeterminada)."""
 	_obtener_politica().poner(sesion.pid, dispositivo.id if dispositivo else "")
+
+
+# ── Entrada: micrófonos, su volumen y «Escuchar este dispositivo» ─────────────
+
+# Propiedades de «Escuchar este dispositivo» (pestaña Escuchar de las propiedades
+# del micrófono en el Panel de sonido). Comprobadas en Windows 11 26300:
+# pid 0 = dispositivo por el que se oye (texto; si falta, el predeterminado),
+# pid 1 = activado (sí/no).
+_FMTID_ESCUCHA = "{24DBB0FC-9311-4B3D-9CF0-18FF155639D4}"
+_PID_ESCUCHA_DESTINO = 0
+_PID_ESCUCHA_ACTIVA = 1
+
+
+def dispositivos_entrada() -> list[Dispositivo]:
+	"""Micrófonos y entradas activos; ``predeterminado`` marca el de uso general."""
+	utilidades, flujos, _roles, estados = _pycaw()
+	actual = _id_predeterminado(flujos.eCapture.value, False)
+	llamadas = _id_predeterminado(flujos.eCapture.value, True)
+	return [
+		Dispositivo(d.id, d.FriendlyName or d.id, d.id == actual, d.id == llamadas)
+		for d in utilidades.GetAllDevices(flujos.eCapture.value, estados.ACTIVE.value)
+	]
+
+
+# ── Quién usa el micrófono o la cámara ───────────────────────────────────────
+
+_CONSENTIMIENTOS = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
+
+
+def nombre_de_consentimiento(subclave: str) -> str:
+	"""Nombre legible de una entrada del registro de permisos (función pura).
+
+	«C:#Program Files#Zoom#bin#Zoom.exe» → «Zoom»;
+	«MSTeams_8wekyb3d8bbwe» → «MSTeams».
+	"""
+	if "#" in subclave:
+		ultimo = subclave.rsplit("#", 1)[-1]
+		return ultimo[:-4] if ultimo.casefold().endswith(".exe") else ultimo
+	return subclave.split("_", 1)[0].rsplit(".", 1)[-1]
+
+
+def apps_usando(capacidad: str = "microphone") -> list[str]:
+	"""Aplicaciones que están usando ahora el micrófono (o ``"webcam"``, la cámara).
+
+	Windows apunta en el registro de cada usuario cuándo empezó y terminó cada
+	aplicación de usarlo: si terminó vale 0, lo está usando. Es lo mismo que
+	enseña el icono de privacidad de la barra de tareas.
+	"""
+	try:
+		import winreg
+	except ImportError:
+		return []
+	resultado: list[str] = []
+
+	def recorrer(ruta: str) -> None:
+		try:
+			clave = winreg.OpenKey(winreg.HKEY_CURRENT_USER, ruta)
+		except OSError:
+			return
+		with clave:
+			indice = 0
+			while True:
+				try:
+					sub = winreg.EnumKey(clave, indice)
+				except OSError:
+					break
+				indice += 1
+				if sub == "NonPackaged":
+					recorrer(ruta + "\\" + sub)
+					continue
+				try:
+					with winreg.OpenKey(clave, sub) as app:
+						inicio, _t = winreg.QueryValueEx(app, "LastUsedTimeStart")
+						fin, _t = winreg.QueryValueEx(app, "LastUsedTimeStop")
+				except OSError:
+					continue
+				if inicio and not fin:
+					nombre = nombre_de_consentimiento(sub)
+					if nombre not in resultado:
+						resultado.append(nombre)
+
+	recorrer(_CONSENTIMIENTOS + "\\" + capacidad)
+	return resultado
+
+
+def _volumen_de(identificador: str | None, flujo_si_falta: str = "captura"):
+	"""``IAudioEndpointVolume`` del dispositivo con ese id (o del predeterminado)."""
+	utilidades, flujos, _r, _e = _pycaw()
+	if not identificador:
+		flujo = flujos.eCapture.value if flujo_si_falta == "captura" else flujos.eRender.value
+		return _predeterminado(flujo).EndpointVolume
+	from comtypes import CLSCTX_ALL
+	from pycaw.api.endpointvolume import IAudioEndpointVolume
+
+	try:
+		dispositivo = utilidades.GetDeviceEnumerator().GetDevice(identificador)
+		interfaz = dispositivo.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+		return interfaz.QueryInterface(IAudioEndpointVolume)
+	except Exception as error:  # noqa: BLE001 - desconectado entre medias
+		raise ErrorAudio("Ese dispositivo ya no está disponible.") from error
+
+
+def volumen_entrada(identificador: str | None = None) -> tuple[int, bool]:
+	"""(volumen 0-100, silenciado) del micrófono ``identificador`` o del predeterminado."""
+	volumen = _volumen_de(identificador)
+	return round(volumen.GetMasterVolumeLevelScalar() * 100), bool(volumen.GetMute())
+
+
+def poner_volumen_entrada(porcentaje: int, identificador: str | None = None) -> int:
+	porcentaje = min(max(int(porcentaje), 0), 100)
+	_volumen_de(identificador).SetMasterVolumeLevelScalar(porcentaje / 100, None)
+	return porcentaje
+
+
+def cambiar_volumen_entrada(paso: int, identificador: str | None = None) -> int:
+	actual, _silencio = volumen_entrada(identificador)
+	return poner_volumen_entrada(actual + paso, identificador)
+
+
+def poner_silencio_entrada(silenciar: bool, identificador: str | None = None) -> bool:
+	_volumen_de(identificador).SetMute(bool(silenciar), None)
+	return bool(silenciar)
+
+
+def poner_silencio_general(silenciar: bool) -> bool:
+	_volumen_salida().SetMute(bool(silenciar), None)
+	return bool(silenciar)
+
+
+def calcular_balance(izquierdo: float, derecho: float) -> int:
+	"""Balance de -100 (todo a la izquierda) a 100 (todo a la derecha); 0 = centrado (función pura)."""
+	mayor = max(izquierdo, derecho)
+	if mayor <= 0:
+		return 0
+	return round((derecho - izquierdo) / mayor * 100)
+
+
+def canales_para_balance(balance: int, volumen: float) -> tuple[float, float]:
+	"""Niveles (izquierdo, derecho) de 0 a 1 que dan ese balance sin cambiar el volumen (función pura).
+
+	El canal hacia el que se inclina queda al volumen general; el otro baja.
+	"""
+	balance = min(max(int(balance), -100), 100)
+	volumen = min(max(float(volumen), 0.0), 1.0)
+	izquierdo = volumen * (1 - balance / 100) if balance > 0 else volumen
+	derecho = volumen * (1 + balance / 100) if balance < 0 else volumen
+	return izquierdo, derecho
+
+
+# Canales izquierdo y derecho según el orden estándar de Windows
+# (delantero izq., delantero der., centro, graves, trasero izq., trasero der., lateral izq., lateral der.).
+CANALES_LADOS = {
+	2: ((0,), (1,)),
+	4: ((0, 2), (1, 3)),
+	6: ((0, 4), (1, 5)),
+	8: ((0, 4, 6), (1, 5, 7)),
+}
+
+
+def balance_general() -> int | None:
+	"""Balance de la salida predeterminada, o ``None`` si su número de canales no lo permite."""
+	volumen = _volumen_salida()
+	lados = CANALES_LADOS.get(volumen.GetChannelCount())
+	if lados is None:
+		return None
+	izquierdo = max(volumen.GetChannelVolumeLevelScalar(c) for c in lados[0])
+	derecho = max(volumen.GetChannelVolumeLevelScalar(c) for c in lados[1])
+	return calcular_balance(izquierdo, derecho)
+
+
+def poner_balance_general(balance: int) -> int:
+	"""Inclina el sonido a la izquierda (negativo) o a la derecha (positivo), como Niveles, Balance de Windows."""
+	volumen = _volumen_salida()
+	lados = CANALES_LADOS.get(volumen.GetChannelCount())
+	if lados is None:
+		raise ErrorAudio("Esta salida no tiene canal izquierdo y derecho: su balance no se puede cambiar.")
+	izquierdo, derecho = canales_para_balance(balance, volumen.GetMasterVolumeLevelScalar())
+	for canal in lados[0]:
+		volumen.SetChannelVolumeLevelScalar(canal, izquierdo, None)
+	for canal in lados[1]:
+		volumen.SetChannelVolumeLevelScalar(canal, derecho, None)
+	return min(max(int(balance), -100), 100)
+
+
+def describir_balance(balance: int) -> str:
+	"""«Centrado», «20 a la izquierda», «100 a la derecha» (función pura)."""
+	if balance == 0:
+		return "Centrado"
+	return f"{abs(balance)} a la " + ("izquierda" if balance < 0 else "derecha")
+
+
+def nombre_entrada_predeterminada() -> str:
+	return next((d.nombre for d in dispositivos_entrada() if d.predeterminado), "sin micrófono")
+
+
+def alternar_escucha_predeterminada() -> str:
+	"""Activa o desactiva «Escuchar este dispositivo» del micrófono predeterminado."""
+	micro = next((d for d in dispositivos_entrada() if d.predeterminado), None)
+	if micro is None:
+		raise ErrorAudio("No hay ningún micrófono.")
+	activa, _destino = leer_escucha(micro.id)
+	poner_escucha(micro.id, not activa)
+	return ("Se oye " if not activa else "Ya no se oye ") + micro.nombre
+
+
+def poner_predeterminado_entrada(dispositivo: Dispositivo) -> None:
+	"""Micrófono predeterminado para todo (consola, multimedia y comunicaciones)."""
+	poner_predeterminado(dispositivo)
+
+
+def _politica_clasica():
+	"""``IPolicyConfig`` (no documentada, estable desde Windows 7) con la firma completa.
+
+	La que trae pycaw omite el parámetro ``bFxStore`` de Get/SetPropertyValue:
+	llamarla así pasaría los argumentos corridos. Aquí se declara bien (los
+	ocho primeros métodos no se usan; solo cuentan para el orden de la tabla).
+	"""
+	import ctypes
+	from ctypes import HRESULT, POINTER
+	from ctypes.wintypes import BOOL, LPCWSTR
+
+	import comtypes
+	from comtypes import COMMETHOD, GUID, IUnknown
+	from pycaw.api.mmdeviceapi import PROPERTYKEY
+	from pycaw.api.mmdeviceapi.depend import PROPVARIANT
+
+	global _IPolicyConfigCompleta
+	if _IPolicyConfigCompleta is None:
+
+		class IPolicyConfigCompleta(IUnknown):
+			_case_insensitive_ = True
+			_iid_ = GUID("{f8679f50-850a-41cf-9c72-430f290290c8}")
+			_methods_ = (
+				*(COMMETHOD([], HRESULT, f"SinUso{n}") for n in range(8)),
+				COMMETHOD(
+					[],
+					HRESULT,
+					"GetPropertyValue",
+					(["in"], LPCWSTR, "dispositivo"),
+					(["in"], BOOL, "almacenEfectos"),
+					(["in"], POINTER(PROPERTYKEY), "clave"),
+					(["in"], POINTER(PROPVARIANT), "valor"),
+				),
+				COMMETHOD(
+					[],
+					HRESULT,
+					"SetPropertyValue",
+					(["in"], LPCWSTR, "dispositivo"),
+					(["in"], BOOL, "almacenEfectos"),
+					(["in"], POINTER(PROPERTYKEY), "clave"),
+					(["in"], POINTER(PROPVARIANT), "valor"),
+				),
+			)
+
+		_IPolicyConfigCompleta = IPolicyConfigCompleta
+	clsid = GUID("{870af99c-171d-4f9e-af0d-e63df40c2bc9}")  # CPolicyConfigClient
+	try:
+		return comtypes.CoCreateInstance(clsid, _IPolicyConfigCompleta, comtypes.CLSCTX_ALL), ctypes, PROPERTYKEY, PROPVARIANT, GUID
+	except Exception as error:  # noqa: BLE001
+		raise ErrorAudio("Esta versión de Windows no deja cambiar esa opción del dispositivo.") from error
+
+
+_IPolicyConfigCompleta = None
+
+
+def _clave_escucha(PROPERTYKEY, GUID, pid: int):  # noqa: N803 - tipos de pycaw
+	clave = PROPERTYKEY()
+	clave.fmtid = GUID(_FMTID_ESCUCHA)
+	clave.pid = pid
+	return clave
+
+
+def leer_escucha(identificador: str) -> tuple[bool, str]:
+	"""(activada, id del dispositivo por el que se oye o "" = el predeterminado)."""
+	utilidades, _f, _r, _e = _pycaw()
+	try:
+		dispositivo = utilidades.CreateDevice(utilidades.GetDeviceEnumerator().GetDevice(identificador))
+		propiedades = {str(k).upper(): v for k, v in (dispositivo.properties or {}).items()}
+	except Exception as error:  # noqa: BLE001
+		raise ErrorAudio("No se pudo leer ese micrófono.") from error
+	activa = propiedades.get(f"{_FMTID_ESCUCHA} {_PID_ESCUCHA_ACTIVA}")
+	destino = propiedades.get(f"{_FMTID_ESCUCHA} {_PID_ESCUCHA_DESTINO}")
+	return activa is True, destino if isinstance(destino, str) else ""
+
+
+def poner_escucha(identificador: str, activar: bool, destino: str | None = None) -> None:
+	"""Activa o desactiva «Escuchar este dispositivo» del micrófono ``identificador``.
+
+	``destino``: id de la salida por la que se oye; ``""`` = la predeterminada;
+	``None`` = no cambiarla. Windows aplica el cambio al momento (como al
+	pulsar Aplicar en el Panel de sonido) y lo recuerda.
+	"""
+	from comtypes.automation import VT_BOOL, VT_LPWSTR
+
+	politica, ctypes, PROPERTYKEY, PROPVARIANT, GUID = _politica_clasica()  # noqa: N806
+	try:
+		if destino is not None:
+			valor = PROPVARIANT()
+			if destino:
+				valor.vt = VT_LPWSTR
+				texto = ctypes.create_unicode_buffer(destino)
+				valor.union.pwszVal = ctypes.cast(texto, ctypes.c_wchar_p)
+			else:
+				valor.vt = 0  # VT_EMPTY: vuelve a la salida predeterminada
+			politica.SetPropertyValue(identificador, False, ctypes.byref(_clave_escucha(PROPERTYKEY, GUID, _PID_ESCUCHA_DESTINO)), ctypes.byref(valor))
+		valor = PROPVARIANT()
+		valor.vt = VT_BOOL
+		valor.union.boolVal = -1 if activar else 0  # VARIANT_TRUE = -1
+		politica.SetPropertyValue(identificador, False, ctypes.byref(_clave_escucha(PROPERTYKEY, GUID, _PID_ESCUCHA_ACTIVA)), ctypes.byref(valor))
+	except ErrorAudio:
+		raise
+	except Exception as error:  # noqa: BLE001
+		log.warning("No se pudo cambiar «Escuchar este dispositivo»", exc_info=True)
+		if (getattr(error, "hresult", 0) & 0xFFFFFFFF) == 0x80070005:
+			raise ErrorAudio("Windows no dio permiso para cambiar «Escuchar este dispositivo».") from error
+		raise ErrorAudio("Windows no dejó cambiar «Escuchar este dispositivo».") from error
+	# Se comprueba leyendo: algunas versiones aceptan la llamada sin aplicarla.
+	if leer_escucha(identificador)[0] != bool(activar):
+		raise ErrorAudio("Windows no aplicó «Escuchar este dispositivo».")
 
 
 # ── Solo esta aplicación ─────────────────────────────────────────────────────

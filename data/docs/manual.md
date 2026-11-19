@@ -221,18 +221,57 @@ Cada fragmento tiene nombre, abreviatura (opcional), categoría y texto. El text
 
 ## Audio
 
-- **Dispositivos de salida** (Alt+D): Intro pone el elegido como salida predeterminada.
-- **Volumen general** (Alt+G): deslizador de 0 a 100.
-- **Aplicaciones con sonido** (Alt+S): las de todas las salidas, con su volumen, si está silenciada y por qué dispositivo suena. Más y Menos (o Control+flechas arriba y abajo) cambian su volumen de 5 en 5; Espacio la silencia.
+El área tiene tres partes: las salidas, las aplicaciones y los micrófonos. Cada deslizador va de 0 a 100: las flechas lo mueven de 1 en 1, RePág y AvPág de 10 en 10, Inicio y Fin a los extremos. Los cambios se aplican al momento y la pantalla se actualiza sola cada dos segundos (si una aplicación empieza a sonar o cambia su volumen, se ve).
 
-En el menú Acción y el contextual de esa lista:
+### Salidas y sonido general
+
+- **Dispositivos de salida** (Alt+D): Intro pone el elegido como salida predeterminada. La columna Estado dice si es el predeterminado, el de comunicaciones o los dos.
+- **Volumen general** (Alt+G) y **Silenciar el sonido general** (Alt+N).
+- **Balance** (Alt+B): de -100 (todo por el oído izquierdo) a 100 (todo por el derecho); 0 es centrado. No cambia el volumen. Útil si oye mejor por un lado. Solo en salidas con canal izquierdo y derecho: algunos auriculares inalámbricos se presentan a Windows con un solo canal y entonces el deslizador queda desactivado.
+
+### Aplicaciones con sonido
+
+- **Aplicaciones con sonido** (Alt+S): las de todas las salidas, con su volumen, si está silenciada y por qué dispositivo suena. Más y Menos (o Control+flechas arriba y abajo) cambian su volumen de 5 en 5; Espacio la silencia.
+- **Volumen de la aplicación** (Alt+P) y **Silenciar la aplicación** (Alt+R): los de la aplicación seleccionada en la lista, igual que los generales. Al moverse por la lista cambian para mostrar la elegida.
+
+### Micrófonos
+
+- **Micrófonos** (Alt+F): los micrófonos y entradas conectados. Intro pone el elegido como micrófono predeterminado.
+- **Volumen del micrófono** (Alt+M) y **Silenciar el micrófono** (Alt+E): los del micrófono seleccionado (si no hay ninguno seleccionado, los del predeterminado).
+- **Escuchar este dispositivo** (Alt+T): se oye el micrófono por los auriculares o altavoces, como la pestaña Escuchar de las propiedades del micrófono en el Panel de sonido de Windows. Sirve para comprobar cómo suena o para oír una entrada de línea. Con altavoces puede acoplarse (un pitido): mejor con auriculares.
+- **Oír el micrófono por** (Alt+O): la salida por la que se oye; «La salida predeterminada» sigue a la que esté en uso.
+
+Windows recuerda estos ajustes aunque se cierre Centro de Mando.
+
+### Menú Acción del área de audio
+
+Además de lo de cada lista:
+
+- **Usar como salida de comunicaciones** y **Usar como micrófono de comunicaciones**: Windows tiene dos dispositivos por defecto, el general y el de comunicaciones (el que usan Teams, WhatsApp, Discord o Skype para las llamadas). Así puede oír la música por los altavoces y las llamadas por los auriculares. Intro en las listas cambia el general y deja el de comunicaciones como estaba.
+- **Guardar el audio actual como perfil**, **Aplicar un perfil de audio** y **Eliminar un perfil de audio**: un perfil recuerda la salida y el micrófono, los de comunicaciones y los dos volúmenes. Por ejemplo «Auriculares» y «Altavoces», o «Reuniones». Si un dispositivo del perfil no está conectado, se aplica el resto y se dice cuál falta. Los dispositivos se buscan también por su nombre, por si Windows les cambió el identificador.
+- **Quién usa el micrófono o la cámara**: dice qué programas los están usando ahora mismo (lo mismo que el icono de privacidad de la barra de tareas).
+
+En el menú Acción y el contextual de la lista de aplicaciones:
 
 - **Cambiar la salida de la aplicación**: elija por qué dispositivo suena solo esa aplicación (por ejemplo, la música por los altavoces y el resto por los auriculares), o «La salida predeterminada» para volver a la normal. Es lo mismo que el Mezclador de volumen de Windows y Windows lo recuerda para la próxima vez. La aplicación tiene que estar sonando para poder cambiarla. Algunos programas eligen su propia salida (NVDA, juegos, programas de música profesional) y no hacen caso de esto.
 - **Solo esta aplicación**: silencia las demás; repítalo para que vuelvan a sonar todas.
 
 Al conectar o desconectar un dispositivo de audio se dice «Conectado» o «Desconectado» y su nombre (Opciones, Anuncios, para desactivarlo). Se espera unos segundos a que el cambio se asiente: si un dispositivo se desconecta y se vuelve a conectar enseguida no se dice nada, y uno con varias entradas de audio con el mismo nombre avisa una sola vez. El audio de monitores y televisores (HDMI, DisplayPort) no avisa de fábrica, porque Windows lo desconecta y lo conecta cada vez que la pantalla reposa o despierta; actívelo en Opciones, Anuncios, **Avisar también del audio de monitores y televisores**.
 
-Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nombre; Control+Alt+Windows+Flecha arriba y abajo suben y bajan el volumen general; Control+Alt+Windows+M silencia o activa el micrófono. En Teclas globales hay además, sin tecla de fábrica, silenciar el sonido general y decir el estado del audio.
+Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nombre; Control+Alt+Windows+Flecha arriba y abajo suben y bajan el volumen general; Control+Alt+Windows+M silencia o activa el micrófono. En Teclas globales hay además, sin tecla de fábrica (asígnelas a su gusto):
+
+- silenciar el sonido general y decir el estado del audio;
+- subir y bajar el volumen del micrófono, escuchar o dejar de escuchar el micrófono y decir su estado («Micrófono USB, volumen 80 %, se está escuchando»);
+- llevar el balance a la izquierda o a la derecha (de 10 en 10) y centrarlo;
+- aplicar el siguiente perfil de audio (pasa por todos en orden y dice el nombre);
+- decir qué aplicaciones usan el micrófono o la cámara.
+
+### Opciones de audio
+
+En Opciones, pestaña **Audio**:
+
+- **Bloquear el volumen del micrófono** y **Volumen fijo del micrófono**: algunos programas (Teams, Chrome, Zoom, ciertos controladores) suben o bajan el micrófono por su cuenta. Con esto marcado, Centro de Mando lo devuelve al volumen fijo en un par de segundos. Si lo cambia usted desde Centro de Mando (deslizador o teclas globales), ese pasa a ser el volumen fijo.
+- **Silenciar el micrófono al arrancar**: al abrir Centro de Mando (también al iniciar Windows) el micrófono queda silenciado; Control+Alt+Windows+M lo activa.
 
 ### El sonido de la aplicación que tiene delante
 
@@ -306,6 +345,7 @@ Herramientas, Opciones (Control+coma), con pestañas:
 - **Portapapeles**: guardar o no, máximo de elementos, caducidad en días, formatos que se guardan, tamaño de imagen, privacidad, programas excluidos, restaurar tras pegar, forma de pegar y anunciar cada copia.
 - **Emoticonos**: forma de insertar, tono de piel, mostrar el carácter y cuántos recientes se recuerdan.
 - **Notificaciones**: guardar o no, cada cuánto se consulta, anunciar las nuevas (todas o solo las de algunas aplicaciones), marcar como leídas, aplicaciones ignoradas, máximo y días.
+- **Audio**: bloquear el volumen del micrófono y silenciarlo al arrancar.
 - **No molestar**: activarlo ahora, horario diario y aplicaciones que se anuncian igualmente.
 - **Ventanas**: seguir a la ventana al moverla y aplicar las reglas al iniciar.
 - **Actualizaciones**: de dónde buscarlas y cada cuánto.

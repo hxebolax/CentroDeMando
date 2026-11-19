@@ -167,6 +167,16 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 	"registro": {
 		"nivel": "INFO",
 	},
+	"audio": {
+		# Perfiles guardados (lista de diccionarios de perfiles_audio.PerfilAudio).
+		"perfiles": [],
+		"ultimo_perfil": "",
+		# Devolver el micrófono a su volumen si otro programa (Teams, el navegador,
+		# un controlador) lo cambia por su cuenta.
+		"bloquear_micro": False,
+		"volumen_micro_bloqueado": 80,
+		"silenciar_micro_al_iniciar": False,
+	},
 	# Calla los avisos automáticos (notificaciones, dispositivos, copias).
 	"no_molestar": {
 		"activo": False,
