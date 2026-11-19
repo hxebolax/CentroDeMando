@@ -363,8 +363,37 @@ class Controlador:
 			if destino and w32.pid(destino) == os.getpid():
 				destino = 0
 			wx.CallAfter(self._abrir_rapida, accion, destino)
+		elif accion.startswith("pegar_reciente_") and accion[15:].isdigit():
+			# El destino es la ventana que tiene el foco AHORA.
+			destino = w32.ventana_activa()
+			wx.CallAfter(self.pegar_reciente, int(accion[15:]), destino)
+		elif accion in ("audio_siguiente_salida", "audio_subir", "audio_bajar", "audio_silenciar", "audio_microfono", "decir_audio"):
+			metodo = {
+				"audio_siguiente_salida": self.siguiente_salida_audio,
+				"audio_subir": lambda: self.volumen_general(5),
+				"audio_bajar": lambda: self.volumen_general(-5),
+				"audio_silenciar": self.silenciar_general,
+				"audio_microfono": self.silenciar_microfono,
+				"decir_audio": self.decir_audio,
+			}[accion]
+			wx.CallAfter(metodo)
+		elif accion == "decir_estado_sistema":
+			wx.CallAfter(self.decir_estado_sistema)
+		elif accion == "bloquear_equipo":
+			from app.services import equipo
+
+			equipo.bloquear()
+		elif accion == "apagar_pantalla":
+			from app.services import equipo
+
+			equipo.apagar_pantalla()
 		elif accion == "pausar_portapapeles":
 			wx.CallAfter(self.alternar_captura)
+		elif accion == "fragmentos_rapido":
+			destino = w32.ventana_activa()
+			if destino and w32.pid(destino) == os.getpid():
+				destino = 0
+			wx.CallAfter(self._abrir_rapida, accion, destino)
 		elif accion == "notificaciones_rapido":
 			wx.CallAfter(self._abrir_rapida, accion, 0)
 		elif accion == "leer_ultima_notificacion":
@@ -440,17 +469,47 @@ class Controlador:
 			_("No se pudo volver a la ventana para pegar. El elemento queda copiado en el portapapeles."),
 		)
 
-	def insertar_texto(self, texto: str, destino: int) -> None:
-		"""Escribe ``texto`` (un emoticono) en la ventana ``destino``."""
+	def pegar_reciente(self, posicion: int, destino: int) -> None:
+		"""Pega el elemento ``posicion`` del historial (1 = el más reciente) en ``destino``."""
+		elementos = self.portapapeles.historial.listar(limite=posicion)
+		if len(elementos) < posicion:
+			self.avisar(_("El historial no tiene {n} elementos.").format(n=posicion))
+			return
+		self.pegar_elemento(elementos[posicion - 1].id, destino)
+
+	@property
+	def fragmentos(self):
+		"""Almacén de fragmentos de texto (se crea la primera vez que se usa)."""
+		if getattr(self, "_fragmentos", None) is None:
+			from app.services.fragmentos import AlmacenFragmentos
+
+			self._fragmentos = AlmacenFragmentos()
+		return self._fragmentos
+
+	def texto_del_portapapeles(self) -> str:
+		from app.services import portapapeles_win32 as pw
+
+		contenido = pw.leer(con_html=False, con_archivos=False, con_imagenes=False)
+		return contenido.texto if contenido else ""
+
+	def insertar_fragmento(self, fragmento, destino: int) -> None:
+		"""Expande las variables del fragmento y lo escribe en ``destino``."""
+		from app.services.fragmentos import expandir
+
+		texto, retroceso = expandir(fragmento.texto, portapapeles=self.texto_del_portapapeles)
+		self.insertar_texto(texto, destino, retroceso)
+
+	def insertar_texto(self, texto: str, destino: int, retroceso: int = 0) -> None:
+		"""Escribe ``texto`` (un emoticono o un fragmento) en la ventana ``destino``."""
 		from app.services import pegado
 
 		if not destino:
-			self.con_destino_anterior(lambda hwnd: self.insertar_texto(texto, hwnd) if hwnd else self.copiar_texto(texto))
+			self.con_destino_anterior(lambda hwnd: self.insertar_texto(texto, hwnd, retroceso) if hwnd else self.copiar_texto(texto))
 			return
 		metodo = str(self.config.obtener("emoticonos.metodo", pegado.METODO_ESCRIBIR))
 		self._en_hilo(
 			"insertar",
-			lambda: pegado.insertar_texto(destino, texto, metodo, self.portapapeles.monitor.hwnd, self.portapapeles.anotar_propia),
+			lambda: pegado.insertar_texto(destino, texto, metodo, self.portapapeles.monitor.hwnd, self.portapapeles.anotar_propia, retroceso),
 			_("No se pudo volver a la ventana para insertar el texto."),
 		)
 
@@ -474,18 +533,19 @@ class Controlador:
 
 	# ── Notificaciones ──────────────────────────────────────────────────────
 
-	def suscribir_notificaciones(self, oyente: Callable[[], None]) -> None:
+	def suscribir_notificaciones(self, oyente: Callable[[bool], None]) -> None:
+		"""``oyente(hay_nuevas)``: con ``True`` hay que releer la lista; con ``False`` basta el contador."""
 		self._oyentes_notificaciones.append(oyente)
 
-	def notificar_no_leidas(self) -> None:
+	def notificar_no_leidas(self, hay_nuevas: bool = False) -> None:
 		for oyente in list(self._oyentes_notificaciones):
 			try:
-				oyente()
+				oyente(hay_nuevas)
 			except Exception:  # noqa: BLE001
 				log.exception("Error al refrescar las notificaciones")
 
 	def _al_notificaciones(self, nuevas: list[Notificacion]) -> None:
-		self.notificar_no_leidas()
+		self.notificar_no_leidas(hay_nuevas=True)
 		if not self.config.obtener("notificaciones.anunciar_nuevas", False):
 			return
 		con_texto = self.config.obtener("notificaciones.anunciar_texto", True)
@@ -523,6 +583,67 @@ class Controlador:
 		self.hablar(
 			_("Captura de notificaciones detenida") if self.notificaciones.pausado else _("Captura de notificaciones reanudada"), True
 		)
+
+	# ── Audio y sistema ─────────────────────────────────────────────────────
+
+	def _audio(self, funcion: Callable[[], str]) -> None:
+		"""Ejecuta una orden de audio en el hilo principal (COM ya iniciado) y dice el resultado."""
+		from app.services import audio
+
+		try:
+			self.hablar(funcion(), True)
+		except audio.ErrorAudio as error:
+			self.avisar(str(error))
+		except Exception:  # noqa: BLE001
+			log.exception("Error de audio")
+			self.avisar(_("No se pudo cambiar el audio. Detalles en el registro."))
+		if self.ventana and self.ventana.area_actual() is self.ventana.area_audio:
+			self.ventana.area_audio.refrescar()
+
+	def siguiente_salida_audio(self) -> None:
+		from app.services import audio
+
+		self._audio(lambda: audio.siguiente_salida().nombre)
+
+	def volumen_general(self, paso: int) -> None:
+		from app.services import audio
+
+		self._audio(lambda: _("Volumen {v} %").format(v=audio.cambiar_volumen_general(paso)))
+
+	def silenciar_general(self) -> None:
+		from app.services import audio
+
+		self._audio(lambda: _("Sonido silenciado") if audio.alternar_silencio_general() else _("Sonido activado"))
+
+	def silenciar_microfono(self) -> None:
+		from app.services import audio
+
+		self._audio(lambda: _("Micrófono silenciado") if audio.alternar_microfono() else _("Micrófono activado"))
+
+	def decir_audio(self) -> None:
+		from app.services import audio
+
+		def texto() -> str:
+			salida = next((d.nombre for d in audio.dispositivos_salida() if d.predeterminado), _("sin salida"))
+			volumen, silencio = audio.volumen_general()
+			return _("{s}, volumen {v} %{m}").format(s=salida, v=volumen, m=_(", silenciado") if silencio else "")
+
+		self._audio(texto)
+
+	def decir_estado_sistema(self) -> None:
+		from app.services import equipo
+
+		try:
+			self.hablar(equipo.resumen_para_voz(), True)
+		except Exception:  # noqa: BLE001
+			log.exception("No se pudo leer el estado del equipo")
+
+	def abrir_permiso_notificaciones(self) -> None:
+		try:
+			os.startfile("ms-settings:privacy-notifications")  # noqa: S606 - página de Configuración de Windows
+		except OSError:
+			log.exception("No se pudo abrir la configuración de privacidad")
+		self.notificaciones.consultar_ya()
 
 	def _abrir_rapida(self, accion: str, destino: int) -> None:
 		if self.ventana:

@@ -2,12 +2,15 @@
 
 ## Qué es
 
-Centro de Mando reúne en un solo programa, accesible con lector de pantalla y manejable por completo con el teclado, cuatro herramientas para Windows 10 y 11:
+Centro de Mando reúne en un solo programa, accesible con lector de pantalla y manejable por completo con el teclado, estas herramientas para Windows 10 y 11:
 
 - **Escritorios virtuales**: cambiar de escritorio al instante (también de forma cíclica), crearlos, ponerles nombre, ordenarlos, eliminarlos y mover ventanas entre ellos.
 - **Historial del portapapeles**: todo lo que copia (textos, textos con formato, archivos e imágenes) queda guardado para pegarlo después donde esté.
 - **Emoticonos**: casi 4000 emojis con nombre en español, símbolos tipográficos y kaomoji, que se escriben directamente en el programa en el que esté.
 - **Notificaciones**: un historial de las notificaciones de Windows y de las aplicaciones, para que no se le pase ninguna.
+- **Fragmentos de texto**: firmas, direcciones o respuestas habituales que se insertan al instante.
+- **Audio**: dispositivo de salida, volumen general, volumen de cada aplicación y micrófono.
+- **Sistema**: estado del equipo y energía (bloquear, suspender, apagar con cuenta atrás...).
 
 Vive en la bandeja del sistema y responde a teclas globales que funcionan desde cualquier programa. Todas se pueden cambiar.
 
@@ -19,7 +22,7 @@ Vive en la bandeja del sistema y responde a teclas globales que funcionan desde 
 ## Primeros pasos
 
 1. Descomprima el archivo ZIP en una carpeta con permiso de escritura (por ejemplo, en Documentos). No la ponga en Archivos de programa.
-2. Abra `CentroDeMando.exe`. La ventana principal muestra cuatro pestañas: Escritorios, Portapapeles, Emoticonos y Notificaciones.
+2. Abra `CentroDeMando.exe`. La ventana principal muestra siete pestañas: Escritorios, Portapapeles, Fragmentos, Emoticonos, Notificaciones, Audio y Sistema.
 3. Pruebe desde cualquier programa:
    - Control+Alt+Windows+Flecha derecha: escritorio siguiente.
    - Control+Alt+Windows+V: historial del portapapeles.
@@ -28,12 +31,23 @@ Vive en la bandeja del sistema y responde a teclas globales que funcionan desde 
 
 ## La ventana principal
 
-Tiene cuatro áreas en pestañas. Para cambiar de área:
+Tiene siete áreas en pestañas. Para cambiar de área:
 
 - Control+Tabulador y Control+Mayúsculas+Tabulador.
-- Alt+1 Escritorios, Alt+2 Portapapeles, Alt+3 Emoticonos, Alt+4 Notificaciones (también en el menú Ver).
+- Menú Ir: Alt+1 Escritorios, Alt+2 Portapapeles, Alt+3 Fragmentos, Alt+4 Emoticonos, Alt+5 Notificaciones, Alt+6 Audio y Alt+7 Sistema. Control+E lleva al buscador del área.
 
-Escape, Alt+F4 o minimizar ocultan la ventana en la bandeja: Centro de Mando sigue funcionando. Para cerrarlo del todo use Escritorios, Salir (Control+Q).
+### La barra de menús
+
+La barra es siempre la misma:
+
+- **Archivo**: abrir la lista rápida del área (Control+L), exportar, ocultar en la bandeja y salir (Control+Q).
+- **Acción**: las órdenes del área en la que está. Cambia al cambiar de pestaña y es igual que el menú contextual (tecla Aplicaciones). Las órdenes que dependen del elemento seleccionado solo están activas si hay uno.
+- **Ir**: las siete áreas y el buscador.
+- **Ver**: ventanas de todos los escritorios, barra de estado, decir el estado del área (Control+D) y actualizar (F5).
+- **Herramientas**: teclas globales (Control+T), reglas de ventanas (Control+R), opciones (Control+coma) y las carpetas de datos y registros.
+- **Ayuda**: manual (F1), lista de teclas (Control+F1), novedades, ayuda del control (Control+H), invitar a un café y Acerca de.
+
+Escape, Alt+F4 o minimizar ocultan la ventana en la bandeja: Centro de Mando sigue funcionando. Para cerrarlo del todo use Archivo, Salir (Control+Q).
 
 La barra de estado muestra siempre lo último que se anunció.
 
@@ -68,7 +82,7 @@ NVDA ya anuncia el escritorio cuando se cambia con las teclas de Windows. Por es
 - **Lista de escritorios** (Alt+L): número, nombre, ventanas y cuál es el actual. Intro va al escritorio; F2 cambia el nombre; Suprimir lo elimina (sus ventanas pasan al vecino); Alt+Mayúsculas+Flecha arriba o abajo cambia su orden.
 - **Ventanas del escritorio seleccionado** (Alt+T): Intro va a la ventana; Control+M la mueve a otro escritorio; Suprimir le pide que se cierre. En Ver, **Ventanas de todos los escritorios** las muestra todas.
 
-En el menú Escritorios también: crear con nombre (Control+Mayúsculas+N), eliminar los escritorios vacíos y fondo de pantalla (Windows 11).
+En el menú Acción también: crear con nombre (Control+Mayúsculas+N), eliminar los escritorios vacíos, fondo de pantalla (Windows 11) y, en el submenú Ventana seleccionada, todas las acciones de la ventana elegida.
 
 ### Mover ventanas entre escritorios
 
@@ -107,7 +121,11 @@ Después de pegar, lo que tenía copiado vuelve al portapapeles (se puede desact
 - Suprimir: eliminarlo.
 - Tecla Aplicaciones: todas las acciones, incluido **Pegar transformado** (en una sola línea, sin espacios sobrantes, en mayúsculas, en minúsculas, con mayúscula en cada palabra o solo al principio).
 
-Otros controles: **Buscar en el historial** (Alt+B, dice cuántos resultados hay), **Mostrar** (Alt+S: todo, favoritos, textos, imágenes o archivos) y **Contenido** (Alt+T, el texto completo).
+Otros controles: **Buscar en el historial** (Alt+B, dice cuántos resultados hay), **Mostrar** (Alt+S: todo, favoritos, textos, imágenes o archivos), la lista **Elementos copiados** (Alt+D) y **Contenido** (Alt+T, el texto completo).
+
+### Pegar los últimos sin abrir nada
+
+En Teclas globales hay nueve acciones, «Pegar el elemento 1 del historial» a «Pegar el elemento 9», sin tecla de fábrica. Asígneles una tecla y pegarán ese elemento directamente donde esté el cursor (1 es el último copiado).
 
 Desde la pestaña Portapapeles de la ventana principal, Intro pega en la ventana que usaba antes de abrir Centro de Mando.
 
@@ -115,7 +133,7 @@ Desde la pestaña Portapapeles de la ventana principal, Intro pega en la ventana
 
 - No se guarda lo que los gestores de contraseñas marcan como privado (KeePass, Bitwarden y otros lo hacen).
 - En Opciones, Portapapeles, puede excluir programas por su nombre (por ejemplo, `keepass.exe`).
-- Portapapeles, **Detener la captura** deja de guardar hasta que la vuelva a activar.
+- En el área de portapapeles, menú Acción, **Detener la captura** deja de guardar hasta que la vuelva a activar.
 - El historial está en `data\db\portapapeles.db`, dentro de la carpeta del programa.
 
 ## Emoticonos
@@ -146,7 +164,7 @@ Centro de Mando guarda las notificaciones de Windows y de las aplicaciones (corr
 
 ### Permiso de Windows
 
-La primera vez, Windows debe permitir que las aplicaciones lean las notificaciones: Configuración, Privacidad y seguridad, Notificaciones. El menú Notificaciones, **Permiso de Windows**, abre esa página. Si no hay permiso, Centro de Mando lo dice.
+La primera vez, Windows debe permitir que las aplicaciones lean las notificaciones: Configuración, Privacidad y seguridad, Notificaciones. En el área de notificaciones, menú Acción, **Permiso de Windows** abre esa página. Si no hay permiso, Centro de Mando lo dice.
 
 ### Consultar el historial
 
@@ -162,13 +180,40 @@ La primera vez, Windows debe permitir que las aplicaciones lean las notificacion
 - F4: favorita. Las favoritas no se borran nunca solas.
 - Suprimir: borrarla del historial. Mayúsculas+Suprimir: además, descartarla del centro de notificaciones de Windows.
 
-Controles: **Buscar en las notificaciones** (Alt+B), **Mostrar** (Alt+S: todas, no leídas o favoritas), **Aplicación** (Alt+C) y **Contenido** (Alt+T).
+Controles: **Buscar en las notificaciones** (Alt+B), **Mostrar** (Alt+S: todas, no leídas o favoritas), **Aplicación** (Alt+N), la lista (Alt+L) y **Contenido** (Alt+T).
 
-En el menú Notificaciones: descartar en Windows, ignorar las de una aplicación, marcar todas como leídas, vaciar, exportar a CSV o texto y detener la captura.
+Con «No leídas», las que va leyendo se quedan en la lista hasta que cambie de filtro, para no perder el sitio.
+
+En el menú Acción y en el menú contextual (tecla Aplicaciones): abrir la aplicación, copiar, leída o no leída, favorita, descartar en Windows, eliminar, ignorar las de una aplicación, ver solo las de esa aplicación, marcar todas como leídas, vaciar, detener la captura y el permiso de Windows. Archivo, Exportar, las guarda en CSV o texto.
 
 Windows no avisa a los programas de las notificaciones nuevas: Centro de Mando le pregunta cada pocos segundos (Opciones, Notificaciones). Así también se guardan las que llegan con «No molestar».
 
 NVDA ya lee las notificaciones cuando aparecen. Por eso **Anunciar las notificaciones nuevas por voz** viene desactivado; actívelo si quiere oírlas aunque esté con otro programa que no las lea.
+
+## Fragmentos de texto
+
+Textos que usa a menudo (firmas, direcciones, respuestas) para insertarlos al instante donde está el cursor.
+
+1. Pulse Control+Alt+Windows+T en el programa donde escribe.
+2. Escriba la abreviatura del fragmento (por ejemplo «firma») y pulse Intro: se inserta el primero que coincide. O baje a la lista y elija con las flechas.
+
+En la lista: Intro inserta, Mayúsculas+Intro copia, Insert crea uno nuevo, F2 lo modifica y Suprimir lo elimina. Controles: **Buscar fragmento** (Alt+B), **Categoría** (Alt+G), la lista (Alt+L) y **Contenido** (Alt+T).
+
+Cada fragmento tiene nombre, abreviatura (opcional), categoría y texto. El texto admite variables que se sustituyen al insertar: `{fecha}`, `{fecha_larga}`, `{hora}`, `{dia}`, `{mes}`, `{anio}` y `{portapapeles}` (lo que tenga copiado). Los textos de varias líneas se pegan (y su portapapeles vuelve a quedar como estaba); los de una línea se teclean. Se guardan en `data\db\fragmentos.json`.
+
+## Audio
+
+- **Dispositivos de salida** (Alt+D): Intro pone el elegido como salida predeterminada.
+- **Volumen general** (Alt+G): deslizador de 0 a 100.
+- **Aplicaciones con sonido** (Alt+S): Más y Menos (o Control+flechas arriba y abajo) cambian su volumen de 5 en 5; Espacio la silencia.
+
+Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nombre; Control+Alt+Windows+Flecha arriba y abajo suben y bajan el volumen general; Control+Alt+Windows+M silencia o activa el micrófono. En Teclas globales hay además, sin tecla de fábrica, silenciar el sonido general y decir el estado del audio.
+
+## Sistema
+
+**Estado del equipo** (Alt+E): batería (si la hay), procesador, memoria, disco del sistema, red y tiempo encendido. Se actualiza solo. Control+Alt+Windows+F12 lo dice desde cualquier programa.
+
+En el menú Acción y en el contextual: bloquear, suspender, hibernar, apagar la pantalla, apagar o reiniciar dentro de los minutos que elija (con el aviso de Windows), cancelar el apagado y mantener el equipo despierto. Bloquear y apagar la pantalla también tienen acción en Teclas globales, sin tecla de fábrica.
 
 ## Teclas globales
 
@@ -216,5 +261,5 @@ Fuera de la carpeta solo se guarda la entrada de **Iniciar con Windows**, si la 
 1. Herramientas, Abrir la carpeta de registros, y envíe a soporte el `sesion_*.log` más reciente.
 2. Si el Explorador de Windows se reinicia, Centro de Mando se reconecta solo.
 3. Si una tecla global no funciona, mire su estado en Teclas globales.
-4. Si no se guardan notificaciones, revise el permiso de Windows (menú Notificaciones, Permiso de Windows).
+4. Si no se guardan notificaciones, revise el permiso de Windows (área de notificaciones, menú Acción, Permiso de Windows).
 5. Si un emoticono no aparece en un programa, en Opciones, Emoticonos, elija **Pegar con Control+V**.

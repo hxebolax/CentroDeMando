@@ -19,6 +19,7 @@ import wx
 
 from app.services import ventanas_win32 as w32
 from app.ui.area_emoticonos import AreaEmoticonos
+from app.ui.area_fragmentos import AreaFragmentos
 from app.ui.area_notificaciones import AreaNotificaciones
 from app.ui.area_portapapeles import AreaPortapapeles
 
@@ -122,3 +123,18 @@ class NotificacionesRapido(VentanaRapida):
 		area = AreaNotificaciones(self, self.controlador)
 		area.refrescar()
 		return area
+
+
+class FragmentosRapido(VentanaRapida):
+	"""Fragmentos de texto: Intro (o la abreviatura e Intro) lo escribe donde se estaba."""
+
+	def __init__(self, controlador: Controlador, destino: int) -> None:
+		super().__init__(_("Fragmentos de texto"), controlador, destino)
+
+	def _crear_area(self) -> AreaFragmentos:
+		return AreaFragmentos(self, self.controlador, self._insertar)
+
+	def _insertar(self, fragmento) -> None:
+		destino = self.destino
+		self.cerrar()
+		self.controlador.insertar_fragmento(fragmento, destino)

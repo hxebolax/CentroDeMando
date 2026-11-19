@@ -67,6 +67,9 @@ class AreaNotificaciones(wx.Panel):
 		self._claves: list[int] = []
 		self._busqueda_pendiente: wx.CallLater | None = None
 		self._leida_pendiente: wx.CallLater | None = None
+		# Con el filtro «No leídas», las que se leen durante la consulta siguen en la
+		# lista hasta cambiar de filtro: si desaparecieran, el usuario perdería su sitio.
+		self._retenidas: set[int] = set()
 
 		sizer = wx.BoxSizer(wx.VERTICAL)
 		fila = wx.BoxSizer(wx.HORIZONTAL)
@@ -81,7 +84,7 @@ class AreaNotificaciones(wx.Panel):
 		self.filtro.SetHelpText(_("Todas, solo las no leídas o solo las favoritas."))
 		fila.Add(etiqueta, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 6)
 		fila.Add(self.filtro, 0, wx.RIGHT, 12)
-		etiqueta = wx.StaticText(self, label=_("Apli&cación:"))
+		etiqueta = wx.StaticText(self, label=_("Aplicació&n:"))
 		self.app = wx.Choice(self, choices=[_("Todas las aplicaciones")])
 		self.app.SetSelection(0)
 		self.app.SetHelpText(_("Ver solo las notificaciones de una aplicación."))
@@ -116,8 +119,9 @@ class AreaNotificaciones(wx.Panel):
 
 		self.buscar.Bind(wx.EVT_TEXT, self._al_escribir)
 		self.buscar.Bind(wx.EVT_KEY_DOWN, self._al_tecla_buscar)
-		self.filtro.Bind(wx.EVT_CHOICE, lambda _e: self.refrescar())
-		self.app.Bind(wx.EVT_CHOICE, lambda _e: self.refrescar())
+		self.filtro.Bind(wx.EVT_CHOICE, self._al_cambiar_filtro)
+		self.app.Bind(wx.EVT_CHOICE, self._al_cambiar_filtro)
+		self.lista.Bind(wx.EVT_CONTEXT_MENU, self._al_menu_contextual)
 		self.lista.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda _e: self.abrir_app())
 		self.lista.Bind(wx.EVT_LIST_ITEM_SELECTED, self._al_seleccionar)
 
@@ -138,7 +142,15 @@ class AreaNotificaciones(wx.Panel):
 				self.app.Set(opciones)
 				self.app.SetSelection(opciones.index(elegida) if elegida in opciones else 0)
 			app = self.app.GetStringSelection() if self.app.GetSelection() > 0 else ""
-			self._notificaciones = self.historial.listar(FILTROS[max(self.filtro.GetSelection(), 0)][0], app, self.buscar.GetValue())
+			filtro = FILTROS[max(self.filtro.GetSelection(), 0)][0]
+			self._notificaciones = self.historial.listar(filtro, app, self.buscar.GetValue())
+			if filtro == FILTRO_NO_LEIDAS and self._retenidas:
+				presentes = {n.id for n in self._notificaciones}
+				for identificador in self._retenidas - presentes:
+					retenida = self.historial.obtener(identificador)
+					if retenida is not None and (not app or retenida.app == app):
+						self._notificaciones.append(retenida)
+				self._notificaciones.sort(key=lambda n: (n.creada, n.id), reverse=True)
 		except Exception:  # noqa: BLE001
 			log.exception("No se pudo leer el historial de notificaciones")
 			self._notificaciones = []
@@ -176,10 +188,15 @@ class AreaNotificaciones(wx.Panel):
 			self._leida_pendiente = wx.CallLater(RETRASO_LEIDA_MS, self._marcar_vista)
 		evento.Skip()
 
+	def _al_cambiar_filtro(self, _evento: wx.CommandEvent) -> None:
+		self._retenidas.clear()
+		self.refrescar()
+
 	def _marcar_vista(self) -> None:
 		n = self.seleccionada()
 		if self and n is not None and not n.leida:
 			self.historial.marcar_leida([n.id], True)
+			self._retenidas.add(n.id)
 			n.leida = True
 			fila = self.lista.fila_actual()
 			self.lista.actualizar_celda(fila, 4, estado_de(n))
@@ -208,6 +225,7 @@ class AreaNotificaciones(wx.Panel):
 		if n is None:
 			return
 		self.historial.marcar_leida([n.id], not n.leida)
+		self._retenidas.add(n.id)
 		self.controlador.hablar(_("Marcada como no leída") if n.leida else _("Marcada como leída"), True)
 		self.refrescar()
 		self.controlador.notificar_no_leidas()
@@ -275,6 +293,24 @@ class AreaNotificaciones(wx.Panel):
 			config.guardar()
 		self.controlador.hablar(_("Las notificaciones de {app} ya no se guardarán").format(app=n.app), True)
 
+	def acciones(self) -> list:
+		n = self.seleccionada()
+		hay = n is not None
+		return [
+			(_("&Abrir la aplicación que la envió (Intro)"), self.abrir_app, hay),
+			(_("&Copiar el texto (Mayúsculas+Intro)"), self.copiar, hay),
+			(_("Marcar como &leída o no leída (Espacio)"), self.alternar_leida, hay),
+			(_("Añadir o quitar de &favoritas\tF4"), self.alternar_favorita, hay),
+			(_("&Descartar en Windows"), self.descartar, hay),
+			(_("&Eliminar del historial (Suprimir)"), self.eliminar, hay),
+			(_("&Ignorar las de esta aplicación"), self.ignorar_app, hay),
+			None,
+			(_("Marcar &todas como leídas"), self.marcar_todas_leidas, True),
+			(_("&Vaciar el historial..."), self.vaciar, True),
+			(_("Detener la ca&ptura"), self.controlador.alternar_notificaciones, True, self.controlador.notificaciones.pausado),
+			(_("Per&miso de Windows..."), self.controlador.abrir_permiso_notificaciones, True),
+		]
+
 	# ── Teclado ─────────────────────────────────────────────────────────────
 
 	def manejar_tecla(self, evento: wx.KeyEvent) -> bool:
@@ -292,6 +328,57 @@ class AreaNotificaciones(wx.Panel):
 		else:
 			return False
 		return True
+
+	def _al_menu_contextual(self, evento: wx.ContextMenuEvent) -> None:
+		n = self.seleccionada()
+		if n is None:
+			return
+		menu = wx.Menu()
+		opciones = [
+			(_("&Abrir la aplicación que la envió"), self.abrir_app),
+			(_("&Copiar el texto"), self.copiar),
+			(_("Marcar como no &leída") if n.leida else _("Marcar como &leída"), self.alternar_leida),
+			(_("Quitar de &favoritas") if n.favorita else _("Añadir a &favoritas"), self.alternar_favorita),
+			None,
+			(_("&Descartar en Windows"), self.descartar),
+			(_("&Eliminar del historial"), self.eliminar),
+			(_("Eliminar y descartar en &Windows"), lambda: self.eliminar(tambien_en_windows=True)),
+			None,
+			(_("&Ignorar las de {app}").format(app=n.app or _("esta aplicación")), self.ignorar_app),
+			(_("Ver solo las de {app}").format(app=n.app) if n.app else None, self.solo_esta_app),
+			(_("Marcar &todas como leídas"), self.marcar_todas_leidas),
+		]
+		for opcion in opciones:
+			if opcion is None:
+				menu.AppendSeparator()
+				continue
+			etiqueta, funcion = opcion
+			if etiqueta is None:
+				continue
+			item = menu.Append(wx.ID_ANY, etiqueta)
+			menu.Bind(wx.EVT_MENU, lambda _e, f=funcion: f(), item)
+		posicion = evento.GetPosition()
+		if posicion == wx.DefaultPosition:
+			rect = self.lista.GetItemRect(max(self.lista.GetFocusedItem(), 0))
+			posicion = wx.Point(rect.x + 20, rect.y + rect.height)
+		else:
+			posicion = self.lista.ScreenToClient(posicion)
+		try:
+			self.lista.PopupMenu(menu, posicion)
+		finally:
+			menu.Destroy()
+
+	def solo_esta_app(self) -> None:
+		n = self.seleccionada()
+		if n is None or not n.app:
+			return
+		self.refrescar()
+		elementos = self.app.GetItems()
+		if n.app in elementos:
+			self.app.SetSelection(elementos.index(n.app))
+			self._retenidas.clear()
+			self.refrescar()
+			self.controlador.hablar(_("Solo las de {app}: {n}").format(app=n.app, n=len(self._notificaciones)), True)
 
 	def _al_escribir(self, _evento: wx.CommandEvent) -> None:
 		if self._busqueda_pendiente is not None:

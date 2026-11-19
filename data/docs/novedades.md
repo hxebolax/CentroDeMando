@@ -1,5 +1,19 @@
 # Novedades de Centro de Mando
 
+## 2.1.0
+
+- **Barra de menús nueva**, más corta y siempre igual: Archivo, Acción, Ir, Ver, Herramientas y Ayuda. El menú **Acción** cambia con el área en la que está y tiene las mismas órdenes que el menú contextual.
+- Las áreas se recorren con **Alt+1 a Alt+7** (menú Ir): Escritorios, Portapapeles, Fragmentos, Emoticonos, Notificaciones, Audio y Sistema. Control+E lleva al buscador del área.
+- **Fragmentos de texto** (Control+Alt+Windows+T): textos guardados que se insertan al instante, con abreviatura, categoría y variables (fecha, hora, portapapeles).
+- **Audio**: cambiar la salida predeterminada (Control+Alt+Windows+O), volumen general (Control+Alt+Windows+Flecha arriba y abajo), volumen y silencio de cada aplicación, y silenciar el micrófono (Control+Alt+Windows+M).
+- **Sistema**: estado del equipo (Control+Alt+Windows+F12 lo dice), bloquear, suspender, hibernar, apagar la pantalla, apagar o reiniciar con cuenta atrás y mantener el equipo despierto.
+- Portapapeles: nuevas teclas globales (sin asignar de fábrica) para pegar directamente uno de los 9 últimos elementos.
+- Notificaciones, correcciones:
+  - La versión compilada no guardaba la aplicación de cada notificación; ahora sí, y las ya guardadas se completan solas.
+  - Con «No leídas», las que se van leyendo ya no desaparecen de la lista hasta cambiar de filtro.
+  - Menú contextual con todas las acciones.
+- Cambian algunas letras: en Portapapeles la lista es Alt+D; en Notificaciones, Aplicación es Alt+N.
+
 ## 2.0.0
 
 - El programa pasa a llamarse **Centro de Mando** y organiza la ventana principal en cuatro áreas: escritorios, portapapeles, emoticonos y notificaciones (Alt+1 a Alt+4).

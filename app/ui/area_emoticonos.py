@@ -257,6 +257,19 @@ class AreaEmoticonos(wx.Panel):
 		self.config.guardar()
 		self.refrescar()
 
+	def acciones(self) -> list:
+		hay = self.seleccionado() is not None
+		return [
+			(_("&Insertar en la ventana anterior (Intro)"), self.insertar, hay or bool(self.texto.GetValue())),
+			(_("&Copiar al portapapeles (Mayúsculas+Intro)"), self.copiar, hay),
+			(_("&Añadir al texto para insertar (Control+Intro)"), self.acumular, hay),
+			(_("Añadir o quitar de &favoritos\tF4"), self.alternar_favorito, hay),
+			(_("Copiar el &nombre"), self.copiar_nombre, hay),
+			(_("Copiar el código &Unicode"), self.copiar_codigo, hay),
+			None,
+			(_("&Vaciar los usados recientemente"), self.vaciar_recientes, True),
+		]
+
 	# ── Teclado ─────────────────────────────────────────────────────────────
 
 	def manejar_tecla(self, evento: wx.KeyEvent) -> bool:

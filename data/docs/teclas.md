@@ -32,6 +32,15 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Control+Alt+Windows+A: historial de notificaciones.
 - Control+Alt+Windows+U: decir la última notificación.
 
+## Globales: fragmentos, audio y sistema
+
+- Control+Alt+Windows+T: fragmentos de texto.
+- Control+Alt+Windows+O: siguiente salida de audio.
+- Control+Alt+Windows+Flecha arriba y abajo: subir y bajar el volumen general.
+- Control+Alt+Windows+M: silenciar o activar el micrófono.
+- Control+Alt+Windows+F12: decir el estado del equipo.
+- Sin tecla de fábrica (asígnelas en Teclas globales): pegar el elemento 1 a 9 del historial, silenciar el sonido general, decir el estado del audio, bloquear el equipo y apagar la pantalla.
+
 ## Globales: información
 
 - Control+Alt+Windows+I: decir el escritorio actual.
@@ -40,11 +49,13 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 
 ## En la ventana principal
 
-- Alt+1, Alt+2, Alt+3, Alt+4: áreas de escritorios, portapapeles, emoticonos y notificaciones.
+- Alt+1 a Alt+7: áreas de escritorios, portapapeles, fragmentos, emoticonos, notificaciones, audio y sistema.
+- Control+E: al buscador del área. Control+L: lista rápida del área.
+- Alt+C: menú Acción (las órdenes del área actual).
 - Control+Tabulador: área siguiente.
 - F1: manual. Control+F1: esta lista. Control+H: ayuda del control enfocado.
 - Escape: ocultar en la bandeja. Control+Q: salir del todo.
-- F5: actualizar. Control+D: decir el escritorio actual.
+- F5: actualizar. Control+D: decir el estado del área.
 - Control+T: teclas globales. Control+R: reglas de ventanas. Control+coma: opciones.
 
 ## En todas las listas
@@ -72,7 +83,7 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Control+Mayúsculas+Intro: pegar como texto sin formato.
 - Mayúsculas+Intro: solo copiar.
 - F2: cambiar el nombre. F4: favorito. Suprimir: eliminar.
-- Alt+B: buscar. Alt+S: mostrar. Alt+C: lista. Alt+T: contenido.
+- Alt+B: buscar. Alt+S: mostrar. Alt+D: lista. Alt+T: contenido.
 
 ## Emoticonos (lista de emoticonos)
 
@@ -87,7 +98,24 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Mayúsculas+Intro: copiar el texto.
 - Espacio: leída o no leída. F4: favorita.
 - Suprimir: borrar del historial. Mayúsculas+Suprimir: borrar y descartar en Windows.
-- Alt+B: buscar. Alt+S: mostrar. Alt+C: aplicación. Alt+L: lista. Alt+T: contenido.
+- Alt+B: buscar. Alt+S: mostrar. Alt+N: aplicación. Alt+L: lista. Alt+T: contenido.
+
+## Fragmentos (lista de fragmentos)
+
+- Intro: insertar. Mayúsculas+Intro: copiar.
+- Insert: nuevo. F2: modificar. Suprimir: eliminar.
+- En el buscador, la abreviatura e Intro: insertar el primero.
+- Alt+B: buscar. Alt+G: categoría. Alt+L: lista. Alt+T: contenido.
+
+## Audio
+
+- Lista de dispositivos (Alt+D): Intro lo pone como salida predeterminada.
+- Volumen general (Alt+G): flechas, RePág y AvPág.
+- Lista de aplicaciones (Alt+S): Más y Menos o Control+flechas arriba y abajo cambian el volumen; Espacio silencia.
+
+## Sistema
+
+- Estado del equipo: Alt+E. Las órdenes de energía, en el menú Acción o con la tecla Aplicaciones.
 
 ## Ventanas rápidas (portapapeles, emoticonos, notificaciones y selector)
 

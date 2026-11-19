@@ -13,16 +13,16 @@ from app.ui.accesibilidad.revision_teclado import afirmar_teclado_correcto
 
 from .conftest import esperar_servicio, procesar_eventos
 
-MENUS_ESPERADOS = ["&Escritorios", "Ve&ntanas", "&Portapapeles", "E&moticonos", "N&otificaciones", "&Ver", "&Herramientas", "Ay&uda"]
+MENUS_ESPERADOS = ["&Archivo", "A&cción", "&Ir", "&Ver", "&Herramientas", "Ay&uda"]
 ATAJOS_ESPERADOS = {
-	"crear": (wx.ACCEL_CTRL, ord("N")),
-	"renombrar": (wx.ACCEL_NORMAL, wx.WXK_F2),
 	"salir": (wx.ACCEL_CTRL, ord("Q")),
 	"actualizar": (wx.ACCEL_NORMAL, wx.WXK_F5),
 	"teclas_globales": (wx.ACCEL_CTRL, ord("T")),
 	"opciones": (wx.ACCEL_CTRL, ord(",")),
 	"manual": (wx.ACCEL_NORMAL, wx.WXK_F1),
 	"ayuda_contextual": (wx.ACCEL_CTRL, ord("H")),
+	"area_escritorios": (wx.ACCEL_ALT, ord("1")),
+	"area_sistema": (wx.ACCEL_ALT, ord("7")),
 }
 PALABRAS_EN_INGLES = {
 	"file",

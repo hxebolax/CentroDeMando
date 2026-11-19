@@ -3,7 +3,7 @@
 [project]
 name = "centro-de-mando"
 # Debe coincidir con APP_VERSION de app/core/version.py (lo comprueba una prueba).
-version = "2.0.0"
+version = "2.1.0"
 description = "Centro de Mando: escritorios virtuales, portapapeles, emoticonos y notificaciones de Windows, accesible con lector de pantalla."
 # Versión mínima de Python del proyecto: ajústela a la elegida al crearlo.
 requires-python = ">=3.15"

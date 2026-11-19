@@ -34,7 +34,26 @@ DATA_PROHIBIDO = {"config", "logs", "db", "cache", "temp", "sessions", "backups"
 # Archivos que nunca se copian aunque estén en una carpeta distribuible.
 PATRONES_EXCLUIDOS = ("__pycache__", "*.pyc", "*.log", "*.tmp", "*.bak", "*.db", "*.key", ".gitkeep", "desktop.ini", "Thumbs.db")
 
-PAQUETES = ["wx", "app", "pyvda", "comtypes", "winrt"]
+# Los módulos de winrt se cargan al vuelo: hay que nombrarlos uno a uno o
+# cx_Freeze no los incluye (y las notificaciones se quedan sin aplicación).
+PAQUETES = [
+	"wx",
+	"app",
+	"pyvda",
+	"comtypes",
+	"pycaw",
+	"psutil",
+	"winrt",
+	"winrt.runtime",
+	"winrt.system",
+	"winrt.windows.foundation",
+	"winrt.windows.foundation.collections",
+	"winrt.windows.applicationmodel",
+	"winrt.windows.data.xml.dom",
+	"winrt.windows.storage.streams",
+	"winrt.windows.ui.notifications",
+	"winrt.windows.ui.notifications.management",
+]
 PAQUETES_OPCIONALES = ["accessible_output2"]
 EXCLUDES = ["tkinter", "numpy", "unittest", "pydoc_data", "pip", "pytest", "_pytest", "ruff", "cx_Freeze"]
 

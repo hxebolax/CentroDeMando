@@ -4,6 +4,9 @@ wxPython>=4.2.2
 # Escritorios virtuales de Windows 10/11 (interfaces COM del Explorador).
 pyvda>=0.6.0
 comtypes>=1.4
+# Audio (Core Audio) y estado del equipo.
+pycaw>=20240316
+psutil>=7.0
 # Notificaciones de Windows (UserNotificationListener, WinRT).
 winrt-runtime>=4.2
 winrt-Windows.UI.Notifications.Management>=3.0

@@ -28,8 +28,10 @@ CATEGORIA_CAMBIAR = "Cambiar de escritorio"
 CATEGORIA_GESTIONAR = "Gestionar escritorios"
 CATEGORIA_VENTANAS = "Ventanas"
 CATEGORIA_INFORMACION = "Información y aplicación"
-CATEGORIA_PORTAPAPELES = "Portapapeles y emoticonos"
+CATEGORIA_PORTAPAPELES = "Portapapeles, fragmentos y emoticonos"
 CATEGORIA_NOTIFICACIONES = "Notificaciones"
+CATEGORIA_AUDIO = "Audio"
+CATEGORIA_SISTEMA = "Sistema y energía"
 
 # Cuántos escritorios tienen acción directa «Ir al escritorio N» (Ctrl+Alt+Win+1 … 0).
 ESCRITORIOS_DIRECTOS = 10
@@ -190,6 +192,23 @@ ACCIONES: list[Accion] = [
 		CATEGORIA_PORTAPAPELES,
 		"Ctrl+Alt+Win+E",
 	),
+	*[
+		Accion(
+			f"pegar_reciente_{n}",
+			f"Pegar el elemento {n} del historial",
+			f"Pega directamente el elemento número {n} del historial (1 = el último copiado) donde está el cursor, sin abrir ninguna ventana.",
+			CATEGORIA_PORTAPAPELES,
+			"",
+		)
+		for n in range(1, 10)
+	],
+	Accion(
+		"fragmentos_rapido",
+		"Fragmentos de texto",
+		"Abre la lista de fragmentos desde cualquier programa; escriba la abreviatura e Intro para insertarlo donde estaba.",
+		CATEGORIA_PORTAPAPELES,
+		"Ctrl+Alt+Win+T",
+	),
 	Accion(
 		"pausar_portapapeles",
 		"Detener o reanudar la captura del portapapeles",
@@ -218,6 +237,15 @@ ACCIONES: list[Accion] = [
 		CATEGORIA_NOTIFICACIONES,
 		"",
 	),
+	Accion("audio_siguiente_salida", "Pasar a la siguiente salida de audio", "Cambia el dispositivo de salida predeterminado al siguiente y dice su nombre.", CATEGORIA_AUDIO, "Ctrl+Alt+Win+O"),
+	Accion("audio_subir", "Subir el volumen general", "Sube el volumen general de 5 en 5 y dice el nuevo valor.", CATEGORIA_AUDIO, "Ctrl+Alt+Win+Arriba"),
+	Accion("audio_bajar", "Bajar el volumen general", "Baja el volumen general de 5 en 5 y dice el nuevo valor.", CATEGORIA_AUDIO, "Ctrl+Alt+Win+Abajo"),
+	Accion("audio_silenciar", "Silenciar o activar el sonido general", "Alterna el silencio de la salida predeterminada.", CATEGORIA_AUDIO, ""),
+	Accion("audio_microfono", "Silenciar o activar el micrófono", "Alterna el silencio del micrófono predeterminado y lo anuncia.", CATEGORIA_AUDIO, "Ctrl+Alt+Win+M"),
+	Accion("decir_audio", "Decir el estado del audio", "Dice la salida predeterminada y el volumen general.", CATEGORIA_AUDIO, ""),
+	Accion("decir_estado_sistema", "Decir el estado del equipo", "Dice la batería, el procesador, la memoria y la red.", CATEGORIA_SISTEMA, "Ctrl+Alt+Win+F12"),
+	Accion("bloquear_equipo", "Bloquear el equipo", "Bloquea la sesión de Windows.", CATEGORIA_SISTEMA, ""),
+	Accion("apagar_pantalla", "Apagar la pantalla", "Apaga el monitor; se enciende al tocar el teclado o el ratón.", CATEGORIA_SISTEMA, ""),
 	Accion(
 		"anunciar_actual",
 		"Decir el escritorio actual",

@@ -162,3 +162,45 @@ def test_area_y_ventana_rapida(controlador_falso, tmp_path, monkeypatch):
 	finally:
 		ventana.Destroy()
 		historial.cerrar()
+
+
+def test_repara_notificaciones_guardadas_sin_aplicacion(historial):
+	"""La 2.0.0 compilada guardó notificaciones sin aplicación: al volver a verlas se completan, sin duplicarlas."""
+	sin_app = Captada(7, "", "", "Título", "Texto", BASE)
+	historial.agregar(sin_app)
+	assert historial.agregar(Captada(7, "Correo!App", "Correo", "Título", "Texto", BASE)) is None
+	assert historial.contar() == 1
+	assert historial.aplicaciones() == ["Correo"]
+
+
+def test_nombre_desde_aumid():
+	from app.services.notificaciones import nombre_desde_aumid
+
+	assert nombre_desde_aumid("Microsoft.WindowsTerminal_8wekyb3d8bbwe!App") == "Microsoft.WindowsTerminal"
+	assert nombre_desde_aumid(r"C:\Programas\app.exe") == "app.exe"
+	assert nombre_desde_aumid("") == ""
+
+
+def test_no_leidas_no_desaparecen_al_leerlas(controlador_falso, tmp_path):
+	from app.ui.area_notificaciones import AreaNotificaciones
+
+	controlador_falso.notificaciones._historial = HistorialNotificaciones(tmp_path / "n.db")
+	historial = controlador_falso.notificaciones.historial
+	for numero in range(3):
+		historial.agregar(_aviso(numero))
+	marco = wx.Frame(None)
+	try:
+		area = AreaNotificaciones(marco, controlador_falso)
+		area.filtro.SetSelection(1)  # no leídas
+		area._al_cambiar_filtro(None)
+		area.lista.enfocar_fila(1, anunciar=False)
+		area._marcar_vista()
+		area.refrescar()
+		assert area.lista.numero_filas() == 3, "la leída sigue en la lista mientras se consulta"
+		assert area.lista.texto_celda(1, 4) == "leída"
+		area._al_cambiar_filtro(None)
+		assert area.lista.numero_filas() == 2, "al cambiar de filtro ya no aparece"
+		assert area.app.GetItems() == ["Todas las aplicaciones", "Correo"]
+	finally:
+		marco.Destroy()
+		historial.cerrar()

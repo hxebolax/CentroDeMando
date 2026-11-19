@@ -2,7 +2,7 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 2.0.0
+- Versión: 2.1.0
 - Autor: Héctor J. Benítez Corredera
 - Plataforma: Windows 10 y 11 de 64 bits
 - Idioma: español
@@ -39,9 +39,22 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 - Control+Alt+Windows+A abre el historial; Control+Alt+Windows+U dice la última y cuántas quedan sin leer.
 - Leídas y no leídas, favoritas, búsqueda, filtro por aplicación, abrir la aplicación que la envió, descartar en Windows, ignorar aplicaciones y exportar a CSV.
 
+**Fragmentos de texto**
+
+- Firmas, direcciones o respuestas guardadas que se insertan donde está el cursor (Control+Alt+Windows+T): escriba la abreviatura e Intro.
+- Variables de fecha, hora y portapapeles.
+
+**Audio**
+
+- Cambiar la salida predeterminada con una tecla y oír su nombre, volumen general, volumen y silencio por aplicación y micrófono.
+
+**Sistema**
+
+- Estado del equipo anunciable (batería, procesador, memoria, disco, red) y energía: bloquear, suspender, hibernar, apagar la pantalla, apagado o reinicio programados y mantener despierto.
+
 **En todo el programa**
 
-- Ventana principal con cuatro áreas (Alt+1 a Alt+4) y ventanas rápidas para usar desde cualquier sitio.
+- Ventana principal con siete áreas (Alt+1 a Alt+7), una barra de menús fija (Archivo, Acción, Ir, Ver, Herramientas, Ayuda) cuyo menú Acción cambia con el área, y ventanas rápidas para usar desde cualquier sitio.
 - Todas las listas se recorren por columnas (flechas izquierda y derecha, Control+1 a 0), con lo que se dice configurable.
 - Todas las teclas globales se pueden cambiar con un editor accesible que avisa de las combinaciones ocupadas.
 - Portable: todo en la carpeta `data`, junto al programa.
@@ -50,7 +63,7 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 
 1. Descomprima el ZIP en una carpeta con permiso de escritura (por ejemplo, Documentos\CentroDeMando).
 2. Abra `CentroDeMando.exe`.
-3. Para el historial de notificaciones, permita en Windows que las aplicaciones lean las notificaciones: Configuración, Privacidad y seguridad, Notificaciones (el menú Notificaciones, Permiso de Windows, lleva allí).
+3. Para el historial de notificaciones, permita en Windows que las aplicaciones lean las notificaciones: Configuración, Privacidad y seguridad, Notificaciones (en el área de notificaciones, menú Acción, Permiso de Windows lleva allí).
 
 ### Documentación
 
@@ -79,6 +92,7 @@ Puede invitar al autor a un café desde Ayuda, Invítame a un café si te gusta 
 - Escritorios virtuales: [pyvda](https://github.com/mrob95/pyvda) (interfaces COM del Explorador, Windows 10 y 11, incluida la 24H2 y posteriores).
 - Portapapeles: ctypes sobre la API Win32 (`AddClipboardFormatListener` en una ventana solo de mensajes) y SQLite.
 - Notificaciones: `UserNotificationListener` de WinRT (paquetes `winrt-*`), con sondeo, y SQLite.
+- Audio: [pycaw](https://github.com/AndreMiras/pycaw) (Core Audio). Sistema: [psutil](https://github.com/giampaolo/psutil) y la API de Windows.
 - Emoticonos: datos de [CLDR](https://github.com/unicode-org/cldr-json) y [emoji-test.txt](https://unicode.org/Public/emoji/latest/emoji-test.txt) (Unicode License V3), preprocesados con `tools/generar_emojis.py`.
 - Teclas globales: `RegisterHotKey` en un hilo propio; gancho `WH_KEYBOARD_LL` opcional solo para Control+Windows+flechas.
 
@@ -97,6 +111,9 @@ app/services/               Lógica sin wx
   portapapeles.py           Historial SQLite y servicio de captura
   pegado.py                 Volver a la ventana de origen, pegar o teclear Unicode
   emojis.py                 Catálogo de emoticonos y búsqueda
+  fragmentos.py             Fragmentos de texto y variables
+  audio.py                  Dispositivos, volumen y sesiones de audio
+  equipo.py                 Estado del equipo y energía
   notificaciones.py         Fuente WinRT, historial SQLite y servicio de sondeo
   ventanas_win32.py         Utilidades Win32 de ventanas y foco
   sistema.py                Inicio con Windows y tonos
@@ -159,4 +176,4 @@ Las pruebas usan una carpeta `data` temporal (`APP_DATA_DIR`), un motor de escri
 ### Licencias de terceros
 
 - Datos de emoticonos: Unicode License V3 (`data/emojis/LICENCIA_UNICODE.txt`).
-- pyvda (MIT), comtypes (MIT), wxPython (wxWindows Library Licence), winrt (MIT), accessible_output2 (MIT).
+- pyvda (MIT), comtypes (MIT), wxPython (wxWindows Library Licence), winrt (MIT), accessible_output2 (MIT), pycaw (MIT), psutil (BSD).

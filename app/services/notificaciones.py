@@ -106,6 +106,12 @@ class FuenteWindows:
 	"""Acceso a ``UserNotificationListener``. Usar desde un único hilo (el de sondeo)."""
 
 	def __init__(self) -> None:
+		# Se importan aquí TODOS los módulos que usan los objetos de las notificaciones
+		# (aunque no se nombren después): si falta uno, se sabe al arrancar y no
+		# al leer cada notificación, que se quedaría sin aplicación.
+		import winrt.windows.applicationmodel  # noqa: F401 - AppInfo de cada notificación
+		import winrt.windows.foundation  # noqa: F401
+		import winrt.windows.foundation.collections  # noqa: F401
 		from winrt.windows.ui.notifications import KnownNotificationBindings, NotificationKinds
 		from winrt.windows.ui.notifications.management import UserNotificationListener
 
@@ -113,6 +119,7 @@ class FuenteWindows:
 		self._tipos = NotificationKinds
 		self._enlaces = KnownNotificationBindings
 		self._bucle = asyncio.new_event_loop()
+		self._avisado_sin_app = False
 
 	def acceso(self) -> str:
 		estado = int(self._oyente.get_access_status())
@@ -145,7 +152,9 @@ class FuenteWindows:
 				aumid = informacion.app_user_model_id or ""
 				app = informacion.display_info.display_name or ""
 		except Exception:  # noqa: BLE001 - algunas apps no tienen nombre visible
-			log.debug("Sin datos de aplicación", exc_info=True)
+			if not self._avisado_sin_app:
+				self._avisado_sin_app = True
+				log.warning("No se pudo leer la aplicación de una notificación.", exc_info=True)
 		textos: list[str] = []
 		visual = aviso.notification.visual
 		enlace = visual.get_binding(self._enlaces.toast_generic)
@@ -153,7 +162,7 @@ class FuenteWindows:
 		for elemento in enlaces:
 			textos += [t.text for t in elemento.get_text_elements() if t.text]
 		creada = aviso.creation_time.timestamp() if hasattr(aviso.creation_time, "timestamp") else time.time()
-		return Captada(int(aviso.id), aumid, app or aumid, textos[0] if textos else "", "\n".join(textos[1:]), creada)
+		return Captada(int(aviso.id), aumid, app or nombre_desde_aumid(aumid), textos[0] if textos else "", "\n".join(textos[1:]), creada)
 
 	def descartar(self, id_windows: int) -> None:
 		self._oyente.remove_notification(id_windows)
@@ -162,12 +171,33 @@ class FuenteWindows:
 		self._bucle.close()
 
 
+def nombre_desde_aumid(aumid: str) -> str:
+	"""Nombre aproximado cuando Windows no da el nombre visible.
+
+	«Microsoft.WindowsTerminal_8wekyb3d8bbwe!App» → «Microsoft.WindowsTerminal».
+	"""
+	if not aumid:
+		return ""
+	nombre = aumid.split("!", 1)[0]
+	if "_" in nombre and "." in nombre:
+		nombre = nombre.rsplit("_", 1)[0]
+	return nombre.rsplit("\\", 1)[-1]
+
+
 def abrir_aplicacion(aumid: str) -> bool:
 	"""Abre la aplicación que envió la notificación (no el contenido concreto del aviso)."""
 	if not aumid or os.name != "nt":
 		return False
+	destino = "shell:AppsFolder\\" + aumid
 	try:
-		os.startfile("shell:AppsFolder\\" + aumid)  # noqa: S606 - identificador de aplicación del sistema
+		os.startfile(destino)  # noqa: S606 - identificador de aplicación del sistema
+		return True
+	except OSError:
+		log.info("os.startfile no abrió %s; se prueba con el Explorador.", aumid, exc_info=True)
+	try:
+		import subprocess
+
+		subprocess.Popen(["explorer.exe", destino], close_fds=True)  # noqa: S603, S607 - programa del sistema
 		return True
 	except OSError:
 		log.warning("No se pudo abrir la aplicación %s", aumid, exc_info=True)
@@ -222,6 +252,15 @@ class HistorialNotificaciones:
 	def agregar(self, captada: Captada, leida: bool = False) -> Notificacion | None:
 		"""Guarda la notificación. ``None`` si ya estaba."""
 		with self._candado, self._conexion:
+			if captada.aumid:
+				# Reparación: la versión 2.0.0 compilada guardó notificaciones sin aplicación
+				# (le faltaba un módulo). Si es la misma, se completa en vez de duplicarla.
+				reparada = self._conexion.execute(
+					"UPDATE notificaciones SET aumid = ?, app = ? WHERE aumid = '' AND id_windows = ? AND creada = ?",
+					(captada.aumid, captada.app, captada.id_windows, captada.creada),
+				)
+				if reparada.rowcount:
+					return None
 			cursor = self._conexion.execute(
 				"INSERT OR IGNORE INTO notificaciones (id_windows, aumid, app, titulo, texto, creada, recibida, leida)"
 				" VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

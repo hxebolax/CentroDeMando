@@ -57,307 +57,55 @@ TAMANO_MINIMO = (400, 300)
 
 # (título, [(nombre, etiqueta, ayuda, tipo) | None]); ``None`` es un separador.
 # ``nombre`` es el sufijo del manejador ``_al_<nombre>``.
+# Barra de menús FIJA (guías de Windows: pocos menús, los mismos siempre).
+# El menú «Acción» va en la segunda posición y se rehace con la pestaña visible:
+# así cada área tiene sus órdenes sin llenar la barra de menús de áreas.
+# (título, [(nombre, etiqueta, ayuda, tipo) | None]); el manejador es ``_al_<nombre>``.
 MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 	(
-		"&Escritorios",
+		"&Archivo",
 		[
-			("ir", "&Ir al escritorio seleccionado", "Cambia al escritorio seleccionado en la lista (también con Intro).", wx.ITEM_NORMAL),
+			("abrir_rapida", "Abrir la lista &rápida del área\tCtrl+L", "Abre la ventana rápida del área actual, la misma de su tecla global.", wx.ITEM_NORMAL),
+			("exportar", "E&xportar...", "Exporta el historial del área actual (portapapeles o notificaciones).", wx.ITEM_NORMAL),
 			None,
-			("crear", "&Crear un escritorio\tCtrl+N", "Crea un escritorio nuevo al final.", wx.ITEM_NORMAL),
-			(
-				"crear_con_nombre",
-				"Crear con no&mbre...\tCtrl+Shift+N",
-				"Crea un escritorio nuevo y le pone el nombre que escriba.",
-				wx.ITEM_NORMAL,
-			),
-			("renombrar", "Cambiar el &nombre...\tF2", "Cambia el nombre del escritorio seleccionado.", wx.ITEM_NORMAL),
-			(
-				"eliminar",
-				"&Eliminar...",
-				"Elimina el escritorio seleccionado (también con Suprimir). Sus ventanas pasan al escritorio vecino.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"eliminar_vacios",
-				"Eliminar los escritorios &vacíos...",
-				"Elimina los escritorios que no tienen ninguna ventana, salvo el actual.",
-				wx.ITEM_NORMAL,
-			),
-			None,
-			(
-				"subir",
-				"Subir en el &orden\tAlt+Shift+Up",
-				"Pasa el escritorio seleccionado una posición hacia el principio.",
-				wx.ITEM_NORMAL,
-			),
-			("bajar", "Bajar en el or&den\tAlt+Shift+Down", "Pasa el escritorio seleccionado una posición hacia el final.", wx.ITEM_NORMAL),
-			None,
-			("fondo", "&Fondo de pantalla...", "Elige una imagen de fondo para el escritorio seleccionado.", wx.ITEM_NORMAL),
-			("fondo_todos", "Fondo para &todos...", "Elige una imagen de fondo para todos los escritorios.", wx.ITEM_NORMAL),
-			None,
-			(
-				"ocultar",
-				"Ocultar en la b&andeja",
-				"Oculta la ventana; Centro de Mando sigue en la bandeja (también con Escape).",
-				wx.ITEM_NORMAL,
-			),
+			("ocultar", "&Ocultar en la bandeja", "Oculta la ventana; Centro de Mando sigue en la bandeja (también con Escape).", wx.ITEM_NORMAL),
 			("salir", "&Salir\tCtrl+Q", "Cierra Centro de Mando por completo; las teclas globales dejan de funcionar.", wx.ITEM_NORMAL),
 		],
 	),
 	(
-		"Ve&ntanas",
+		"&Ir",
 		[
-			(
-				"activar_ventana_menu",
-				"&Activar la ventana",
-				"Cambia al escritorio de la ventana seleccionada y la activa (también con Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"mover_ventana",
-				"&Mover a otro escritorio...\tCtrl+M",
-				"Elige el escritorio al que llevar la ventana seleccionada.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"mover_ventana_siguiente",
-				"Mover al escritorio s&iguiente",
-				"Lleva la ventana seleccionada al escritorio siguiente.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"mover_ventana_anterior",
-				"Mover al escritorio a&nterior",
-				"Lleva la ventana seleccionada al escritorio anterior.",
-				wx.ITEM_NORMAL,
-			),
+			("area_escritorios", "&1 Escritorios\tAlt+1", "Área de escritorios y ventanas.", wx.ITEM_NORMAL),
+			("area_portapapeles", "&2 Portapapeles\tAlt+2", "Historial del portapapeles.", wx.ITEM_NORMAL),
+			("area_fragmentos", "&3 Fragmentos de texto\tAlt+3", "Textos guardados para insertar.", wx.ITEM_NORMAL),
+			("area_emoticonos", "&4 Emoticonos\tAlt+4", "Emojis, símbolos y kaomoji.", wx.ITEM_NORMAL),
+			("area_notificaciones", "&5 Notificaciones\tAlt+5", "Historial de notificaciones.", wx.ITEM_NORMAL),
+			("area_audio", "&6 Audio\tAlt+6", "Dispositivos de salida y volumen de cada aplicación.", wx.ITEM_NORMAL),
+			("area_sistema", "&7 Sistema\tAlt+7", "Estado del equipo y energía.", wx.ITEM_NORMAL),
 			None,
-			(
-				"anclar_ventana",
-				"Mostrar en &todos los escritorios",
-				"Alterna si la ventana seleccionada aparece en todos los escritorios.",
-				wx.ITEM_CHECK,
-			),
-			(
-				"anclar_aplicacion",
-				"Mostrar la a&plicación en todos los escritorios",
-				"Alterna si todas las ventanas de su aplicación aparecen en todos los escritorios.",
-				wx.ITEM_CHECK,
-			),
-			None,
-			("cerrar_ventana", "&Cerrar la ventana", "Pide a la ventana seleccionada que se cierre, como Alt+F4.", wx.ITEM_NORMAL),
-			(
-				"buscar_ventana",
-				"&Buscar una ventana en todos los escritorios...\tCtrl+F",
-				"Lista las ventanas de todos los escritorios para ir a una.",
-				wx.ITEM_NORMAL,
-			),
-		],
-	),
-	(
-		"&Portapapeles",
-		[
-			(
-				"pegar_elemento",
-				"&Pegar en la ventana anterior",
-				"Pega el elemento seleccionado en la ventana que usaba antes de Centro de Mando (también con Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"pegar_sin_formato",
-				"Pegar como texto &sin formato",
-				"Pega solo el texto del elemento, sin negritas ni enlaces (también con Control+Mayúsculas+Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"copiar_elemento",
-				"&Copiar al portapapeles",
-				"Copia el elemento seleccionado sin pegarlo (también con Mayúsculas+Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"favorito_elemento",
-				"Añadir o quitar de &favoritos",
-				"Marca o desmarca el elemento como favorito (también con F4).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"renombrar_elemento",
-				"Cambiar el &nombre del elemento...",
-				"Pone un nombre al elemento para reconocerlo (también con F2 en la lista).",
-				wx.ITEM_NORMAL,
-			),
-			("eliminar_elemento", "&Eliminar el elemento", "Borra el elemento del historial (también con Suprimir).", wx.ITEM_NORMAL),
-			None,
-			("vaciar_historial", "&Vaciar el historial...", "Borra todo el historial salvo los favoritos.", wx.ITEM_NORMAL),
-			(
-				"exportar_historial",
-				"E&xportar los textos...",
-				"Guarda todos los textos del historial en un archivo de texto.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"pausar_captura",
-				"&Detener la captura",
-				"Mientras está marcada, lo que se copia no se guarda en el historial.",
-				wx.ITEM_CHECK,
-			),
-			None,
-			(
-				"portapapeles_rapido",
-				"Abrir la lista &rápida",
-				"Abre la ventana rápida del historial, la misma de la tecla global.",
-				wx.ITEM_NORMAL,
-			),
-		],
-	),
-	(
-		"E&moticonos",
-		[
-			(
-				"insertar_emoticono",
-				"&Insertar en la ventana anterior",
-				"Escribe el emoticono seleccionado en la ventana que usaba antes de Centro de Mando (también con Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"copiar_emoticono",
-				"&Copiar al portapapeles",
-				"Copia el emoticono seleccionado (también con Mayúsculas+Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"acumular_emoticono",
-				"&Añadir al texto para insertar",
-				"Va juntando emoticonos para insertarlos de una vez (también con Control+Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"favorito_emoticono",
-				"Añadir o quitar de &favoritos",
-				"Marca o desmarca el emoticono como favorito (también con F4).",
-				wx.ITEM_NORMAL,
-			),
-			None,
-			("vaciar_recientes", "&Vaciar los usados recientemente", "Borra la lista de emoticonos usados recientemente.", wx.ITEM_NORMAL),
-			(
-				"emoticonos_rapido",
-				"Abrir la lista &rápida",
-				"Abre la ventana rápida de emoticonos, la misma de la tecla global.",
-				wx.ITEM_NORMAL,
-			),
-		],
-	),
-	(
-		"N&otificaciones",
-		[
-			(
-				"abrir_app_notificacion",
-				"&Abrir la aplicación que la envió",
-				"Abre la aplicación de la notificación seleccionada (también con Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"copiar_notificacion",
-				"&Copiar el texto",
-				"Copia el título y el texto de la notificación (también con Mayúsculas+Intro).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"leida_notificacion",
-				"Marcar como &leída o no leída",
-				"Cambia si la notificación está leída (también con Espacio).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"favorita_notificacion",
-				"Añadir o quitar de &favoritas",
-				"Las favoritas no se borran nunca solas (también con F4).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"descartar_notificacion",
-				"&Descartar en Windows",
-				"La quita del centro de notificaciones de Windows; en el historial se queda.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"eliminar_notificacion",
-				"&Eliminar del historial",
-				"La borra del historial (también con Suprimir; Mayúsculas+Suprimir la descarta también de Windows).",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"ignorar_app_notificacion",
-				"&Ignorar las de esta aplicación",
-				"Las notificaciones nuevas de esta aplicación ya no se guardarán.",
-				wx.ITEM_NORMAL,
-			),
-			None,
-			("todas_leidas", "Marcar &todas como leídas", "Marca como leídas todas las notificaciones del historial.", wx.ITEM_NORMAL),
-			("vaciar_notificaciones", "&Vaciar el historial...", "Borra el historial salvo las favoritas.", wx.ITEM_NORMAL),
-			(
-				"exportar_notificaciones",
-				"E&xportar...",
-				"Guarda en un archivo CSV o de texto las notificaciones que se ven en la lista.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"pausar_notificaciones",
-				"Detener la ca&ptura",
-				"Mientras está marcada, las notificaciones nuevas no se guardan.",
-				wx.ITEM_CHECK,
-			),
-			(
-				"permiso_notificaciones",
-				"Per&miso de Windows...",
-				"Abre la configuración de Windows que permite leer las notificaciones.",
-				wx.ITEM_NORMAL,
-			),
-			None,
-			(
-				"notificaciones_rapido",
-				"Abrir la lista &rápida",
-				"Abre la ventana rápida de notificaciones, la misma de la tecla global.",
-				wx.ITEM_NORMAL,
-			),
+			("ir_busqueda", "Al cuadro de &búsqueda\tCtrl+E", "Lleva el foco al buscador del área actual.", wx.ITEM_NORMAL),
 		],
 	),
 	(
 		"&Ver",
 		[
-			("area_escritorios", "Área de e&scritorios\tAlt+1", "Muestra el área de escritorios y ventanas.", wx.ITEM_NORMAL),
-			("area_portapapeles", "Área de &portapapeles\tAlt+2", "Muestra el historial del portapapeles.", wx.ITEM_NORMAL),
-			("area_emoticonos", "Área de e&moticonos\tAlt+3", "Muestra los emoticonos.", wx.ITEM_NORMAL),
-			("area_notificaciones", "Área de n&otificaciones\tAlt+4", "Muestra el historial de notificaciones.", wx.ITEM_NORMAL),
-			None,
 			(
 				"ver_todas",
-				"Ventanas de &todos los escritorios",
-				"La lista de ventanas muestra las de todos los escritorios en lugar de solo las del seleccionado.",
+				"&Ventanas de todos los escritorios",
+				"En el área de escritorios, la lista de ventanas muestra las de todos los escritorios.",
 				wx.ITEM_CHECK,
 			),
 			("barra_estado", "&Barra de estado", "Muestra u oculta la barra de estado.", wx.ITEM_CHECK),
 			None,
-			("decir_actual", "&Decir el escritorio actual\tCtrl+D", "Anuncia el escritorio en el que está.", wx.ITEM_NORMAL),
-			("actualizar", "&Actualizar\tF5", "Vuelve a leer los escritorios y las ventanas.", wx.ITEM_NORMAL),
+			("decir_estado", "&Decir el estado del área\tCtrl+D", "Anuncia lo más importante del área actual.", wx.ITEM_NORMAL),
+			("actualizar", "&Actualizar\tF5", "Vuelve a leer los datos del área actual.", wx.ITEM_NORMAL),
 		],
 	),
 	(
 		"&Herramientas",
 		[
-			(
-				"teclas_globales",
-				"&Teclas globales...\tCtrl+T",
-				"Ver y cambiar los atajos que funcionan desde cualquier programa.",
-				wx.ITEM_NORMAL,
-			),
-			(
-				"reglas",
-				"&Reglas de ventanas...\tCtrl+R",
-				"Llevar automáticamente las ventanas de ciertos programas a un escritorio.",
-				wx.ITEM_NORMAL,
-			),
+			("teclas_globales", "&Teclas globales...\tCtrl+T", "Ver y cambiar los atajos que funcionan desde cualquier programa.", wx.ITEM_NORMAL),
+			("reglas", "&Reglas de ventanas...\tCtrl+R", "Llevar automáticamente las ventanas de ciertos programas a un escritorio.", wx.ITEM_NORMAL),
 			("opciones", "&Opciones...\tCtrl+,", "Opciones de Centro de Mando.", wx.ITEM_NORMAL),
 			None,
 			("carpeta_datos", "Abrir la carpeta de &datos", "Abre en el Explorador la carpeta data del programa.", wx.ITEM_NORMAL),
@@ -370,12 +118,7 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("manual", "&Manual de usuario\tF1", "Abre el manual de usuario.", wx.ITEM_NORMAL),
 			("teclas", "&Lista de teclas\tCtrl+F1", "Muestra todos los atajos de teclado.", wx.ITEM_NORMAL),
 			("novedades", "&Novedades de la versión", "Muestra los cambios de cada versión.", wx.ITEM_NORMAL),
-			(
-				"ayuda_contextual",
-				"Ayuda del control &enfocado\tCtrl+H",
-				"Explica para qué sirve el control que tiene el foco.",
-				wx.ITEM_NORMAL,
-			),
+			("ayuda_contextual", "Ayuda del control &enfocado\tCtrl+H", "Explica para qué sirve el control que tiene el foco.", wx.ITEM_NORMAL),
 			None,
 			(
 				"invitar_cafe",
@@ -387,6 +130,7 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 		],
 	),
 ]
+TITULO_ACCION = "A&cción"
 
 
 class VentanaPrincipal(wx.Frame):
@@ -430,6 +174,7 @@ class VentanaPrincipal(wx.Frame):
 		self.Bind(wx.EVT_CHAR_HOOK, self._al_tecla_ventana)
 
 		self.controlador.suscribir(self._al_cambiar_estado)
+		self.reconstruir_menu_accion()
 
 		self._temporizador_buzon = wx.Timer(self)
 		self.Bind(wx.EVT_TIMER, self._al_revisar_buzon, self._temporizador_buzon)
@@ -451,9 +196,13 @@ class VentanaPrincipal(wx.Frame):
 				self.Bind(wx.EVT_MENU, getattr(self, f"_al_{nombre}"), item)
 				self.elementos_menu[nombre] = item
 			barra.Append(menu, _(titulo))
+		self._menu_accion = wx.Menu()
+		self._ids_accion: list[int] = []
+		barra.Insert(1, self._menu_accion, _(TITULO_ACCION))
 		self.SetMenuBar(barra)
-		# Al abrir el menú Ventanas, sus casillas reflejan la ventana seleccionada.
+		# Al abrir el menú Acción se activan solo las órdenes que se pueden usar ahora.
 		self.Bind(wx.EVT_MENU_OPEN, self._al_abrir_menu)
+		self.Bind(wx.EVT_MENU_CLOSE, self._al_cerrar_menu)
 
 	def _crear_contenido(self) -> None:
 		"""Etiqueta SIEMPRE creada justo antes de su lista: de ella toma el nombre el lector."""
@@ -511,13 +260,32 @@ class VentanaPrincipal(wx.Frame):
 			lambda identificador, transformacion=None: self.controlador.pegar_elemento(identificador, 0, transformacion),
 		)
 		self.libro.AddPage(self.area_portapapeles, _("Portapapeles"))
+		from app.ui.area_fragmentos import AreaFragmentos
+
+		self.area_fragmentos = AreaFragmentos(self.libro, self.controlador, lambda f: self.controlador.insertar_fragmento(f, 0))
+		self.libro.AddPage(self.area_fragmentos, _("Fragmentos"))
 		self.area_emoticonos = AreaEmoticonos(self.libro, self.controlador, lambda texto: self.controlador.insertar_texto(texto, 0))
 		self.libro.AddPage(self.area_emoticonos, _("Emoticonos"))
 		from app.ui.area_notificaciones import AreaNotificaciones
 
 		self.area_notificaciones = AreaNotificaciones(self.libro, self.controlador)
 		self.libro.AddPage(self.area_notificaciones, _("Notificaciones"))
-		self.areas = [self.panel, self.area_portapapeles, self.area_emoticonos, self.area_notificaciones]
+		from app.ui.area_audio import AreaAudio
+		from app.ui.area_sistema import AreaSistema
+
+		self.area_audio = AreaAudio(self.libro, self.controlador)
+		self.libro.AddPage(self.area_audio, _("Audio"))
+		self.area_sistema = AreaSistema(self.libro, self.controlador)
+		self.libro.AddPage(self.area_sistema, _("Sistema"))
+		self.areas = [
+			self.panel,
+			self.area_portapapeles,
+			self.area_fragmentos,
+			self.area_emoticonos,
+			self.area_notificaciones,
+			self.area_audio,
+			self.area_sistema,
+		]
 		self.controlador.suscribir_notificaciones(self._al_cambiar_notificaciones)
 		marco = wx.BoxSizer(wx.VERTICAL)
 		marco.Add(self.libro, 1, wx.EXPAND)
@@ -752,26 +520,182 @@ class VentanaPrincipal(wx.Frame):
 		if area is self.panel:
 			self._enfocar_lista()
 		else:
-			if area in (self.area_portapapeles, self.area_notificaciones):
+			if area is not self.area_emoticonos:
 				area.refrescar()
 			area.enfocar()
 
 	def _al_cambiar_area(self, evento: wx.BookCtrlEvent) -> None:
-		if evento.GetSelection() == 1:
-			self.area_portapapeles.refrescar()
-		elif evento.GetSelection() == 3:
-			self.area_notificaciones.refrescar()
+		area = self.areas[evento.GetSelection()] if 0 <= evento.GetSelection() < len(self.areas) else None
+		if area is not None and area not in (self.panel, self.area_emoticonos):
+			area.refrescar()
+		if area is self.area_notificaciones:
 			self.controlador.notificaciones.consultar_ya()
+		wx.CallAfter(self.reconstruir_menu_accion)
 		evento.Skip()
+
+	# ── Menú Acción ─────────────────────────────────────────────────────────
+
+	def _acciones_escritorios(self) -> list:
+		hay = bool(self.escritorio_seleccionado())
+		ventana = self.ventana_seleccionada()
+		con_ventana = ventana is not None
+		llamar = lambda funcion: lambda: funcion(None)  # noqa: E731
+		return [
+			(_("&Ir al escritorio seleccionado (Intro)"), llamar(self._al_ir), hay),
+			(_("&Crear un escritorio\tCtrl+N"), llamar(self._al_crear), True),
+			(_("Crear con no&mbre...\tCtrl+Shift+N"), llamar(self._al_crear_con_nombre), True),
+			(_("Cambiar el &nombre...\tF2"), llamar(self._al_renombrar), hay),
+			(_("&Eliminar... (Suprimir)"), llamar(self._al_eliminar), hay),
+			(_("Eliminar los escritorios &vacíos..."), llamar(self._al_eliminar_vacios), True),
+			None,
+			(_("Subir en el &orden\tAlt+Shift+Up"), llamar(self._al_subir), hay),
+			(_("Bajar en el or&den\tAlt+Shift+Down"), llamar(self._al_bajar), hay),
+			(_("&Fondo de pantalla..."), llamar(self._al_fondo), hay),
+			(_("Fondo para &todos..."), llamar(self._al_fondo_todos), True),
+			None,
+			(
+				"submenu",
+				_("Ventana &seleccionada"),
+				[
+					(_("&Activar la ventana (Intro)"), llamar(self._al_activar_ventana_menu), con_ventana),
+					(_("&Mover a otro escritorio...\tCtrl+M"), llamar(self._al_mover_ventana), con_ventana),
+					(_("Mover al escritorio s&iguiente"), llamar(self._al_mover_ventana_siguiente), con_ventana),
+					(_("Mover al escritorio a&nterior"), llamar(self._al_mover_ventana_anterior), con_ventana),
+					(_("Mostrar en &todos los escritorios"), llamar(self._al_anclar_ventana), con_ventana, bool(ventana and ventana.anclada)),
+					(_("Mostrar la a&plicación en todos"), llamar(self._al_anclar_aplicacion), con_ventana, bool(ventana and ventana.app_anclada)),
+					(_("&Cerrar la ventana (Suprimir)"), llamar(self._al_cerrar_ventana), con_ventana),
+				],
+			),
+			(_("&Buscar una ventana en todos los escritorios...\tCtrl+F"), llamar(self._al_buscar_ventana), True),
+		]
+
+	def acciones_area_actual(self) -> list:
+		area = self.area_actual()
+		return self._acciones_escritorios() if area is self.panel else area.acciones()
+
+	def _llenar_menu(self, menu: wx.Menu, entradas: list, activar_todo: bool) -> None:
+		for entrada in entradas:
+			if entrada is None:
+				menu.AppendSeparator()
+				continue
+			if entrada[0] == "submenu":
+				submenu = wx.Menu()
+				self._llenar_menu(submenu, entrada[2], activar_todo)
+				menu.AppendSubMenu(submenu, entrada[1], entrada[1].replace("&", ""))
+				continue
+			etiqueta, funcion, activo, *casilla = entrada
+			ayuda = etiqueta.split("\t", 1)[0].replace("&", "")
+			item = menu.Append(wx.ID_ANY, etiqueta, ayuda, wx.ITEM_CHECK if casilla else wx.ITEM_NORMAL)
+			if casilla:
+				item.Check(bool(casilla[0]))
+			# Con el menú cerrado todo queda activo para que sus atajos (F2, F4...) funcionen;
+			# la propia acción comprueba si hay algo seleccionado.
+			item.Enable(bool(activo) or activar_todo)
+			self.Bind(wx.EVT_MENU, lambda _e, f=funcion: f(), item)
+			self._ids_accion.append(item.GetId())
+
+	def reconstruir_menu_accion(self, activar_todo: bool = True) -> None:
+		"""Rehace el menú Acción con las órdenes del área visible."""
+		if not self:
+			return
+		for identificador in self._ids_accion:
+			self.Unbind(wx.EVT_MENU, id=identificador)
+		self._ids_accion = []
+		for item in list(self._menu_accion.GetMenuItems()):
+			self._menu_accion.DestroyItem(item)
+		try:
+			self._llenar_menu(self._menu_accion, self.acciones_area_actual(), activar_todo)
+		except Exception:  # noqa: BLE001 - un área rota no debe dejar la barra sin menú
+			log.exception("No se pudo construir el menú Acción")
+
+	def mostrar_menu_acciones(self, control: wx.Window) -> None:
+		"""El mismo contenido del menú Acción como menú contextual, junto al elemento enfocado."""
+		menu = wx.Menu()
+		ids_previos = self._ids_accion
+		self._ids_accion = []
+		try:
+			self._llenar_menu(menu, self.acciones_area_actual(), activar_todo=False)
+			posicion = wx.Point(20, 20)
+			if isinstance(control, wx.ListCtrl) and control.GetItemCount():
+				rect = control.GetItemRect(max(control.GetFocusedItem(), 0))
+				posicion = wx.Point(rect.x + 20, rect.y + rect.height)
+			control.PopupMenu(menu, posicion)
+		finally:
+			for identificador in self._ids_accion:
+				self.Unbind(wx.EVT_MENU, id=identificador)
+			self._ids_accion = ids_previos
+			menu.Destroy()
+
+	def _al_cerrar_menu(self, evento: wx.MenuEvent) -> None:
+		if evento.GetMenu() is self._menu_accion:
+			wx.CallAfter(self.reconstruir_menu_accion)
+		evento.Skip()
+
+	def _al_area_fragmentos(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(2)
+
+	def _al_area_audio(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(5)
+
+	def _al_area_sistema(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(6)
+
+	def _al_ir_busqueda(self, _evento: wx.CommandEvent | None) -> None:
+		area = self.area_actual()
+		buscador = getattr(area, "buscar", None)
+		if buscador is not None:
+			buscador.SetFocus()
+			buscador.SelectAll()
+		else:
+			self.controlador.hablar(_("Esta área no tiene buscador."), True)
+
+	def _al_abrir_rapida(self, _evento: wx.CommandEvent | None) -> None:
+		area = self.area_actual()
+		rapidas = {
+			id(self.area_portapapeles): "portapapeles_rapido",
+			id(self.area_fragmentos): "fragmentos_rapido",
+			id(self.area_emoticonos): "emoticonos_rapido",
+			id(self.area_notificaciones): "notificaciones_rapido",
+		}
+		if area is self.panel:
+			self.abrir_selector_escritorios()
+		elif id(area) in rapidas:
+			self.abrir_ventana_rapida(rapidas[id(area)], 0)
+		else:
+			self.controlador.hablar(_("Esta área no tiene lista rápida."), True)
+
+	def _al_exportar(self, _evento: wx.CommandEvent | None) -> None:
+		area = self.area_actual()
+		if area is self.area_portapapeles:
+			self._al_exportar_historial(None)
+		elif area is self.area_notificaciones:
+			self._al_exportar_notificaciones(None)
+		else:
+			self.controlador.hablar(_("Esta área no tiene nada que exportar."), True)
+
+	def _al_decir_estado(self, _evento: wx.CommandEvent | None) -> None:
+		area = self.area_actual()
+		if area is self.panel:
+			self.controlador.anunciar_escritorio()
+		elif area is self.area_notificaciones:
+			self.controlador.leer_ultima_notificacion()
+		elif area is self.area_audio:
+			self.controlador.decir_audio()
+		elif area is self.area_sistema:
+			self.controlador.decir_estado_sistema()
+		elif area is self.area_portapapeles:
+			self.controlador.hablar(_("{n} elementos en el historial").format(n=self.controlador.portapapeles.historial.contar()), True)
+		else:
+			self.controlador.hablar(_("{n} en la lista").format(n=area.lista.numero_filas()), True)
 
 	def _al_cambiar_historial(self) -> None:
 		if self and self.IsShown() and self.area_actual() is self.area_portapapeles:
 			self.area_portapapeles.refrescar()
 
-	def _al_cambiar_notificaciones(self) -> None:
+	def _al_cambiar_notificaciones(self, hay_nuevas: bool = False) -> None:
 		if not self:
 			return
-		if self.IsShown() and self.area_actual() is self.area_notificaciones:
+		if hay_nuevas and self.IsShown() and self.area_actual() is self.area_notificaciones:
 			self.area_notificaciones.refrescar()
 		if self._bandeja is not None:
 			self._bandeja.poner_no_leidas(self.controlador.notificaciones.historial.no_leidas())
@@ -841,10 +765,14 @@ class VentanaPrincipal(wx.Frame):
 
 	def abrir_ventana_rapida(self, accion: str, destino: int) -> None:
 		"""Abre la ventana rápida de portapapeles o de emoticonos para la ventana ``destino``."""
-		from app.ui.ventanas_rapidas import EmoticonosRapido, NotificacionesRapido, PortapapelesRapido
+		from app.ui.ventanas_rapidas import EmoticonosRapido, FragmentosRapido, NotificacionesRapido, PortapapelesRapido
 
 		self._cerrar_selector()
-		clase = {"portapapeles_rapido": PortapapelesRapido, "notificaciones_rapido": NotificacionesRapido}.get(accion, EmoticonosRapido)
+		clase = {
+			"portapapeles_rapido": PortapapelesRapido,
+			"notificaciones_rapido": NotificacionesRapido,
+			"fragmentos_rapido": FragmentosRapido,
+		}.get(accion, EmoticonosRapido)
 		self._selector = clase(self.controlador, destino)
 		self._selector.abrir()
 
@@ -1184,24 +1112,9 @@ class VentanaPrincipal(wx.Frame):
 		)
 
 	def _al_abrir_menu(self, evento: wx.MenuEvent) -> None:
-		ventana = self.ventana_seleccionada()
-		for nombre in (
-			"activar_ventana_menu",
-			"mover_ventana",
-			"mover_ventana_siguiente",
-			"mover_ventana_anterior",
-			"anclar_ventana",
-			"anclar_aplicacion",
-			"cerrar_ventana",
-		):
-			self.elementos_menu[nombre].Enable(ventana is not None)
-		self.elementos_menu["anclar_ventana"].Check(bool(ventana and ventana.anclada))
-		self.elementos_menu["anclar_aplicacion"].Check(bool(ventana and ventana.app_anclada))
-		self.elementos_menu["pausar_captura"].Check(self.controlador.portapapeles.pausado)
-		self.elementos_menu["pausar_notificaciones"].Check(self.controlador.notificaciones.pausado)
+		if evento.GetMenu() is self._menu_accion:
+			self.reconstruir_menu_accion(activar_todo=False)
 		evento.Skip()
-
-	# ── Manejadores: Escritorios ─────────────────────────────────────────────
 
 	def _al_ir(self, _evento: wx.CommandEvent | None) -> None:
 		numero = self.escritorio_seleccionado()
@@ -1401,6 +1314,11 @@ class VentanaPrincipal(wx.Frame):
 		self.controlador.anunciar_escritorio()
 
 	def _al_actualizar(self, _evento: wx.CommandEvent | None) -> None:
+		area = self.area_actual()
+		if area is not self.panel:
+			area.refrescar()
+			self.SetStatusText(_("Actualizado"))
+			return
 		self.controlador.servicio.actualizar()
 		self.refrescar_ventanas()
 		self.SetStatusText(_("Actualizado"))

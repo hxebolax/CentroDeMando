@@ -87,7 +87,7 @@ class AreaPortapapeles(wx.Panel):
 		fila.Add(self.filtro, 0)
 		sizer.Add(fila, 0, wx.EXPAND | wx.ALL, 8)
 
-		etiqueta_lista = wx.StaticText(self, label=_("Elementos &copiados:"))
+		etiqueta_lista = wx.StaticText(self, label=_("Elementos copia&dos:"))
 		self.lista = listas.crear_lista(
 			self,
 			_("Elementos copiados"),
@@ -223,6 +223,23 @@ class AreaPortapapeles(wx.Panel):
 			borrados = self.controlador.portapapeles.historial.vaciar(incluir_favoritos=False)
 			self.controlador.hablar(_("Eliminados {n} elementos").format(n=borrados), True)
 			self.refrescar()
+
+	def acciones(self) -> list:
+		"""Órdenes del menú Acción (las del elemento primero; la primera es la de Intro)."""
+		elemento = self.seleccionado()
+		hay = elemento is not None
+		texto = hay and elemento.tipo != "imagen"
+		return [
+			(_("&Pegar en la ventana anterior (Intro)"), self.pegar, hay),
+			(_("Pegar como texto &sin formato (Control+Mayúsculas+Intro)"), lambda: self.pegar("sin_formato"), texto),
+			(_("&Copiar al portapapeles (Mayúsculas+Intro)"), self.copiar, hay),
+			(_("Añadir o quitar de &favoritos\tF4"), self.alternar_favorito, hay),
+			(_("Cambiar el &nombre...\tF2"), self.renombrar, hay),
+			(_("&Eliminar (Suprimir)"), self.eliminar, hay),
+			None,
+			(_("&Vaciar el historial..."), self.vaciar, True),
+			(_("&Detener la captura"), self.controlador.alternar_captura, True, self.controlador.portapapeles.pausado),
+		]
 
 	# ── Teclado ─────────────────────────────────────────────────────────────
 

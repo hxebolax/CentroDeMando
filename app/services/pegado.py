@@ -163,13 +163,36 @@ def pegar_contenido(
 	return True
 
 
-def insertar_texto(hwnd: int, texto: str, metodo: str, dueno: int, al_escribir: Callable[[int], None] | None = None) -> bool:
-	"""Escribe ``texto`` en ``hwnd``: tecleándolo (``METODO_ESCRIBIR``) o pegándolo."""
-	if metodo != METODO_ESCRIBIR:
-		return pegar_contenido(hwnd, Contenido(texto=texto), dueno, al_escribir, restaurar=True, metodo=metodo)
-	if not devolver_foco(hwnd):
-		return False
-	soltar_modificadores()
-	time.sleep(0.03)
-	escribir_unicode(texto)
-	return True
+VK_LEFT = 0x25
+
+
+def mover_cursor_izquierda(veces: int) -> None:
+	"""Retrocede el cursor ``veces`` caracteres (para dejarlo donde marca ``{cursor}``)."""
+	if veces > 0:
+		# Las flechas son teclas «extendidas»: sin la marca, Windows las toma por el 4 del teclado numérico.
+		extendida = 0x0001
+		_enviar([e for _i in range(veces) for e in ((VK_LEFT, 0x4B, extendida), (VK_LEFT, 0x4B, extendida | KEYEVENTF_KEYUP))])
+
+
+def insertar_texto(
+	hwnd: int, texto: str, metodo: str, dueno: int, al_escribir: Callable[[int], None] | None = None, retroceso: int = 0
+) -> bool:
+	"""Escribe ``texto`` en ``hwnd``: tecleándolo (``METODO_ESCRIBIR``) o pegándolo.
+
+	Un texto de varias líneas se pega siempre: teclear el salto de línea como
+	carácter no equivale a pulsar Intro en todos los programas.
+	"""
+	if metodo != METODO_ESCRIBIR or "\n" in texto:
+		correcto = pegar_contenido(
+			hwnd, Contenido(texto=texto), dueno, al_escribir, restaurar=True, metodo=metodo if metodo != METODO_ESCRIBIR else METODO_CONTROL_V
+		)
+	else:
+		correcto = devolver_foco(hwnd)
+		if correcto:
+			soltar_modificadores()
+			time.sleep(0.03)
+			escribir_unicode(texto)
+	if correcto and retroceso:
+		time.sleep(0.05)
+		mover_cursor_izquierda(retroceso)
+	return correcto
