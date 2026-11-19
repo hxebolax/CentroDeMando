@@ -2,7 +2,7 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 2.2.0
+- Versión: 2.3.0
 - Autor: Héctor J. Benítez Corredera
 - Plataforma: Windows 10 y 11 de 64 bits
 - Idioma: español
@@ -47,10 +47,19 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 **Audio**
 
 - Cambiar la salida predeterminada con una tecla y oír su nombre, volumen general, volumen y silencio por aplicación y micrófono.
+- Volumen y silencio **de la aplicación enfocada** con teclas globales, también en navegadores.
 
 **Sistema**
 
 - Estado del equipo anunciable (batería, procesador, memoria, disco, red) y energía: bloquear, suspender, hibernar, apagar la pantalla, apagado o reinicio programados y mantener despierto.
+
+**Ventanas y procesos**
+
+- Todas las ventanas abiertas y los procesos: activar, minimizar, maximizar, siempre encima (también con Control+Alt+Windows+K), cerrar y finalizar; uso de procesador y memoria.
+
+**Temporizadores y alarmas**
+
+- Temporizadores, alarmas y recordatorios (también diarios) con aviso sonoro, hablado y en pantalla; posponer y detener.
 
 **Lanzador**
 
@@ -119,6 +128,8 @@ app/services/               Lógica sin wx
   audio.py                  Dispositivos, volumen y sesiones de audio
   equipo.py                 Estado del equipo y energía
   lanzador.py               Lanzador: programas (Get-StartApps), ajustes, acciones y calculadora segura
+  procesos.py               Ventanas abiertas y procesos (Win32 directo: rápido también con procesos protegidos)
+  temporizadores.py         Temporizadores, alarmas y recordatorios
   notificaciones.py         Fuente WinRT, historial SQLite y servicio de sondeo
   ventanas_win32.py         Utilidades Win32 de ventanas y foco
   sistema.py                Inicio con Windows y tonos

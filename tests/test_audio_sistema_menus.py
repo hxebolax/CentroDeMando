@@ -94,6 +94,8 @@ def test_menu_accion_cambia_con_el_area(controlador_falso, audio_falso, monkeypa
 			(4, "Abrir la aplicación que la envió"),
 			(5, "Usar como salida predeterminada"),
 			(6, "Bloquear el equipo"),
+			(7, "Activar la ventana"),
+			(8, "Nuevo temporizador"),
 		)
 		for indice, esperado in casos:
 			marco.libro.SetSelection(indice)
@@ -102,5 +104,39 @@ def test_menu_accion_cambia_con_el_area(controlador_falso, audio_falso, monkeypa
 			afirmar_teclado_correcto(marco, teclas_propias=["Supr", "Escape"])
 	finally:
 		marco.area_sistema._temporizador.Stop()
+		marco.area_procesos._temporizador.Stop()
+		marco.area_temporizadores._reloj.Stop()
 		marco.salir()
 		procesar_eventos(lambda: not marco, 2)
+
+
+def test_sesiones_de_la_ventana_enfocada(monkeypatch):
+	"""Firefox suena desde un hijo con su mismo nombre; el Explorador no se queda con el sonido de lo que abrió."""
+	import psutil
+
+	sesiones = [
+		audio.Sesion("f", "firefox.exe", 501, 80, False),
+		audio.Sesion("t", "thunderbird.exe", 900, 100, False),
+		audio.Sesion("w", "msedgewebview2.exe", 701, 50, False),
+	]
+	monkeypatch.setattr(audio, "sesiones", lambda: sesiones)
+
+	class Falso:
+		def __init__(self, pid, nombre, hijos=()):
+			self.pid, self._nombre, self._hijos = pid, nombre, hijos
+
+		def name(self):
+			return self._nombre
+
+		def children(self, recursive=False):
+			return list(self._hijos)
+
+	procesos_falsos = {
+		500: Falso(500, "firefox.exe", [Falso(501, "firefox.exe")]),
+		1: Falso(1, "explorer.exe", [Falso(900, "thunderbird.exe")]),
+		700: Falso(700, "ms-teams.exe", [Falso(701, "msedgewebview2.exe")]),
+	}
+	monkeypatch.setattr(psutil, "Process", lambda pid: procesos_falsos[pid])
+	for hwnd, pid, esperado in ((10, 500, ["f"]), (11, 1, []), (12, 700, ["w"])):
+		monkeypatch.setattr(audio, "_pid_real", lambda h, p=pid: p)
+		assert [s.clave for s in audio.sesiones_de_ventana(hwnd)] == esperado

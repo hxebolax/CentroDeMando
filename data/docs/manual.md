@@ -12,6 +12,8 @@ Centro de Mando reúne en un solo programa, accesible con lector de pantalla y m
 - **Audio**: dispositivo de salida, volumen general, volumen de cada aplicación y micrófono.
 - **Sistema**: estado del equipo y energía (bloquear, suspender, apagar con cuenta atrás...).
 - **Lanzador**: abrir al momento programas, ajustes de Windows y cualquier acción de Centro de Mando, y hacer cálculos.
+- **Ventanas y procesos**: todas las ventanas abiertas y los procesos, para activarlos, ponerlos siempre encima, cerrarlos o finalizarlos.
+- **Temporizadores y alarmas**: cuentas atrás, alarmas y recordatorios con aviso sonoro y hablado.
 
 Vive en la bandeja del sistema y responde a teclas globales que funcionan desde cualquier programa. Todas se pueden cambiar.
 
@@ -23,7 +25,7 @@ Vive en la bandeja del sistema y responde a teclas globales que funcionan desde 
 ## Primeros pasos
 
 1. Descomprima el archivo ZIP en una carpeta con permiso de escritura (por ejemplo, en Documentos). No la ponga en Archivos de programa.
-2. Abra `CentroDeMando.exe`. La ventana principal muestra siete pestañas: Escritorios, Portapapeles, Fragmentos, Emoticonos, Notificaciones, Audio y Sistema.
+2. Abra `CentroDeMando.exe`. La ventana principal muestra nueve pestañas: Escritorios, Portapapeles, Fragmentos, Emoticonos, Notificaciones, Audio, Sistema, Ventanas y procesos, y Temporizadores.
 3. Pruebe desde cualquier programa:
    - Control+Alt+Windows+Flecha derecha: escritorio siguiente.
    - Control+Alt+Windows+V: historial del portapapeles.
@@ -32,10 +34,10 @@ Vive en la bandeja del sistema y responde a teclas globales que funcionan desde 
 
 ## La ventana principal
 
-Tiene siete áreas en pestañas. Para cambiar de área:
+Tiene nueve áreas en pestañas. Para cambiar de área:
 
 - Control+Tabulador y Control+Mayúsculas+Tabulador.
-- Menú Ir: Alt+1 Escritorios, Alt+2 Portapapeles, Alt+3 Fragmentos, Alt+4 Emoticonos, Alt+5 Notificaciones, Alt+6 Audio y Alt+7 Sistema. Control+E lleva al buscador del área.
+- Menú Ir: Alt+1 Escritorios, Alt+2 Portapapeles, Alt+3 Fragmentos, Alt+4 Emoticonos, Alt+5 Notificaciones, Alt+6 Audio, Alt+7 Sistema, Alt+8 Ventanas y procesos y Alt+9 Temporizadores. Control+E lleva al buscador del área.
 
 ### La barra de menús
 
@@ -43,7 +45,7 @@ La barra es siempre la misma:
 
 - **Archivo**: lanzador (Control+Mayúsculas+P), abrir la lista rápida del área (Control+L), exportar, ocultar en la bandeja y salir (Control+Q).
 - **Acción**: las órdenes del área en la que está. Cambia al cambiar de pestaña y es igual que el menú contextual (tecla Aplicaciones). Las órdenes que dependen del elemento seleccionado solo están activas si hay uno.
-- **Ir**: las siete áreas y el buscador.
+- **Ir**: las nueve áreas y el buscador.
 - **Ver**: ventanas de todos los escritorios, barra de estado, decir el estado del área (Control+D) y actualizar (F5).
 - **Herramientas**: teclas globales (Control+T), reglas de ventanas (Control+R), opciones (Control+coma) y las carpetas de datos y registros.
 - **Ayuda**: manual (F1), lista de teclas (Control+F1), novedades, ayuda del control (Control+H), invitar a un café y Acerca de.
@@ -210,11 +212,43 @@ Cada fragmento tiene nombre, abreviatura (opcional), categoría y texto. El text
 
 Teclas globales: Control+Alt+Windows+O pasa a la siguiente salida y dice su nombre; Control+Alt+Windows+Flecha arriba y abajo suben y bajan el volumen general; Control+Alt+Windows+M silencia o activa el micrófono. En Teclas globales hay además, sin tecla de fábrica, silenciar el sonido general y decir el estado del audio.
 
+### El sonido de la aplicación que tiene delante
+
+Sin abrir nada, desde el programa que está usando:
+
+- Control+Alt+Mayúsculas+Windows+Flecha arriba y abajo: subir y bajar de 5 en 5 solo su volumen.
+- Control+Alt+Mayúsculas+Windows+Fin: silenciarlo o devolverle el sonido.
+- Control+Alt+Mayúsculas+Windows+Inicio: decir su volumen.
+
+Los navegadores (Firefox, Chrome, Edge) y muchas aplicaciones suenan desde procesos internos: Centro de Mando los reconoce como parte del mismo programa. Si el programa no está sonando, lo dice.
+
 ## Sistema
 
 **Estado del equipo** (Alt+E): batería (si la hay), procesador, memoria, disco del sistema, red y tiempo encendido. Se actualiza solo. Control+Alt+Windows+F12 lo dice desde cualquier programa.
 
 En el menú Acción y en el contextual: bloquear, suspender, hibernar, apagar la pantalla, apagar o reiniciar dentro de los minutos que elija (con el aviso de Windows), cancelar el apagado y mantener el equipo despierto. Bloquear y apagar la pantalla también tienen acción en Teclas globales, sin tecla de fábrica.
+
+## Ventanas y procesos
+
+- **Buscar** (Alt+B): filtra las dos listas.
+- **Lista de ventanas abiertas** (Alt+L): título, programa y estado (minimizada, maximizada, siempre encima, no responde), de todos los escritorios. Intro activa la ventana (y cambia a su escritorio); Suprimir le pide que se cierre.
+- **Procesos** (Alt+P): nombre, PID, procesador y memoria, de mayor a menor uso de procesador. Suprimir lo finaliza, tras confirmarlo. Los procesos protegidos del sistema no aparecen.
+
+En el menú Acción y en el contextual: activar, minimizar, maximizar, restaurar, siempre encima, cerrar, finalizar el proceso, abrir la ubicación del programa y copiar su ruta. Las listas se actualizan solas cada pocos segundos sin moverle de su sitio.
+
+Control+Alt+Windows+K pone (o quita) siempre encima la ventana que tiene el foco, desde cualquier programa.
+
+## Temporizadores y alarmas
+
+En el menú Acción (o con la tecla Aplicaciones en la lista):
+
+- **Nuevo temporizador**: horas, minutos, segundos y un nombre opcional («Sacar el pan del horno»).
+- **Nueva alarma o recordatorio**: una hora (7:30, 19:05...) y un texto opcional; si la hora ya pasó, suena mañana. Puede repetirse todos los días.
+- Pausar o reanudar un temporizador, decir lo que queda (Espacio) y eliminar (Suprimir).
+
+La lista (Alt+L) dice el nombre, el tipo, cuándo suena y cuánto queda. Al vencer, suena un aviso cada pocos segundos durante dos minutos, se anuncia el texto y aparece una ventana delante de todo con **Posponer 5 minutos** y **Detener**. Se guardan en `data\db\temporizadores.json`: si una alarma vence con el programa cerrado, avisa al abrirlo.
+
+En Teclas globales hay, sin tecla de fábrica, nuevo temporizador, nueva alarma y decir los temporizadores; también se encuentran en el lanzador.
 
 ## Lanzador
 

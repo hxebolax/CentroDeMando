@@ -83,6 +83,8 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("area_notificaciones", "&5 Notificaciones\tAlt+5", "Historial de notificaciones.", wx.ITEM_NORMAL),
 			("area_audio", "&6 Audio\tAlt+6", "Dispositivos de salida y volumen de cada aplicación.", wx.ITEM_NORMAL),
 			("area_sistema", "&7 Sistema\tAlt+7", "Estado del equipo y energía.", wx.ITEM_NORMAL),
+			("area_procesos", "&8 Ventanas y procesos\tAlt+8", "Ventanas abiertas y procesos: activar, siempre encima, cerrar, finalizar.", wx.ITEM_NORMAL),
+			("area_temporizadores", "&9 Temporizadores y alarmas\tAlt+9", "Temporizadores, alarmas y recordatorios.", wx.ITEM_NORMAL),
 			None,
 			("ir_busqueda", "Al cuadro de &búsqueda\tCtrl+E", "Lleva el foco al buscador del área actual.", wx.ITEM_NORMAL),
 		],
@@ -278,6 +280,14 @@ class VentanaPrincipal(wx.Frame):
 		self.libro.AddPage(self.area_audio, _("Audio"))
 		self.area_sistema = AreaSistema(self.libro, self.controlador)
 		self.libro.AddPage(self.area_sistema, _("Sistema"))
+		from app.ui.area_procesos import AreaProcesos
+
+		self.area_procesos = AreaProcesos(self.libro, self.controlador)
+		self.libro.AddPage(self.area_procesos, _("Ventanas y procesos"))
+		from app.ui.area_temporizadores import AreaTemporizadores
+
+		self.area_temporizadores = AreaTemporizadores(self.libro, self.controlador)
+		self.libro.AddPage(self.area_temporizadores, _("Temporizadores"))
 		self.areas = [
 			self.panel,
 			self.area_portapapeles,
@@ -286,6 +296,8 @@ class VentanaPrincipal(wx.Frame):
 			self.area_notificaciones,
 			self.area_audio,
 			self.area_sistema,
+			self.area_procesos,
+			self.area_temporizadores,
 		]
 		self.controlador.suscribir_notificaciones(self._al_cambiar_notificaciones)
 		marco = wx.BoxSizer(wx.VERTICAL)
@@ -640,6 +652,20 @@ class VentanaPrincipal(wx.Frame):
 
 	def _al_area_sistema(self, _evento: wx.CommandEvent | None) -> None:
 		self.mostrar_area(6)
+
+	def _al_area_procesos(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(7)
+
+	def _al_area_temporizadores(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(8)
+
+	def _al_nuevo_temporizador(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(8)
+		self.area_temporizadores.nuevo_temporizador()
+
+	def _al_nueva_alarma(self, _evento: wx.CommandEvent | None) -> None:
+		self.mostrar_area(8)
+		self.area_temporizadores.nueva_alarma()
 
 	def _al_ir_busqueda(self, _evento: wx.CommandEvent | None) -> None:
 		area = self.area_actual()

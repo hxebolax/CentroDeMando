@@ -1,5 +1,11 @@
 # Novedades de Centro de Mando
 
+## 2.3.0
+
+- **Sonido de la aplicación enfocada**: Control+Alt+Mayúsculas+Windows+Flecha arriba y abajo suben y bajan el volumen solo del programa que tiene el foco; Control+Alt+Mayúsculas+Windows+Fin lo silencia y Control+Alt+Mayúsculas+Windows+Inicio dice su volumen. Funciona también con los navegadores, que suenan desde procesos internos.
+- **Ventanas y procesos** (Alt+8): todas las ventanas abiertas con su estado (minimizada, maximizada, siempre encima, no responde) para activarlas, minimizarlas, maximizarlas, ponerlas siempre encima, cerrarlas o finalizar su programa; y la lista de procesos con su uso de procesador y memoria. Control+Alt+Windows+K pone o quita siempre encima la ventana activa.
+- **Temporizadores y alarmas** (Alt+9): temporizadores que se pueden pausar, alarmas y recordatorios a una hora (también diarios). Al vencer suenan, se anuncian y aparece un aviso con Posponer y Detener. Se guardan aunque se cierre el programa.
+
 ## 2.2.0
 
 - **Lanzador** (Control+Alt+Windows+Espacio, o Archivo, Lanzador, Control+Mayúsculas+P): escriba y abra al momento cualquier programa instalado (de escritorio o de la Tienda), un ajuste de Windows o cualquier acción de Centro de Mando. Busca por trozos de palabras o iniciales, sin tildes, y lo más usado sube.

@@ -166,3 +166,102 @@ def alternar_silencio_sesion(clave: str) -> bool:
 	nuevo = not bool(simple.GetMute())
 	simple.SetMute(nuevo, None)
 	return nuevo
+
+
+# ── La aplicación enfocada ───────────────────────────────────────────────────
+
+
+# Procesos que reproducen el sonido de la aplicación que los empotra.
+AYUDANTES_WEB = {"msedgewebview2.exe", "cefsharp.browsersubprocess.exe", "qtwebengineprocess.exe"}
+
+
+def _pid_real(hwnd: int) -> int:
+	"""PID del programa de la ventana. Las apps de la Tienda se ven a través de
+	ApplicationFrameHost: su proceso real es el de la ventana hija que contiene.
+	"""
+	import ctypes
+	from ctypes import wintypes
+
+	from app.services import ventanas_win32 as w32
+
+	pid = w32.pid(hwnd)
+	if w32.clase(hwnd) != "ApplicationFrameWindow":
+		return pid
+	encontrado = [pid]
+	tipo = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+	def visitar(hijo, _parametro):
+		otro = w32.pid(int(hijo))
+		if otro and otro != pid:
+			encontrado[0] = otro
+			return False
+		return True
+
+	ctypes.windll.user32.EnumChildWindows(wintypes.HWND(hwnd), tipo(visitar), 0)
+	return encontrado[0]
+
+
+def sesiones_de_ventana(hwnd: int) -> list[Sesion]:
+	"""Sesiones de audio del programa de esa ventana.
+
+	Los navegadores y otros programas suenan desde procesos hijos (Firefox,
+	Chrome, Edge...): se aceptan el mismo proceso, cualquier proceso con el
+	mismo ejecutable y los descendientes que son motores web empotrados
+	(WebView2, CEF, Qt WebEngine). Otros descendientes NO: todo lo que se abre
+	desde el escritorio desciende del Explorador, y se le atribuiría su sonido.
+	"""
+	import psutil
+
+	pid = _pid_real(hwnd)
+	if not pid:
+		return []
+	try:
+		proceso = psutil.Process(pid)
+		nombre = proceso.name().casefold()
+		ayudantes = set()
+		for hijo in proceso.children(recursive=True):
+			try:
+				if hijo.name().casefold() in AYUDANTES_WEB:
+					ayudantes.add(hijo.pid)
+			except psutil.Error:
+				continue
+	except (psutil.NoSuchProcess, psutil.AccessDenied):
+		return []
+	return [s for s in sesiones() if s.pid == pid or s.pid in ayudantes or s.nombre.casefold() == nombre]
+
+
+def _programa_de(hwnd: int) -> str:
+	from app.services import ventanas_win32 as w32
+
+	return w32.nombre_proceso(hwnd).removesuffix(".exe").removesuffix(".EXE") or "La aplicación"
+
+
+def cambiar_volumen_ventana(hwnd: int, paso: int) -> str:
+	"""Sube o baja el volumen de la aplicación de esa ventana; devuelve lo que se anuncia."""
+	propias = sesiones_de_ventana(hwnd)
+	if not propias:
+		raise ErrorAudio(f"{_programa_de(hwnd)} no está reproduciendo sonido.")
+	nuevo = 0
+	for sesion in propias:
+		nuevo = cambiar_volumen_sesion(sesion.clave, paso)
+	return f"{_programa_de(hwnd)}: {nuevo} %"
+
+
+def alternar_silencio_ventana(hwnd: int) -> str:
+	propias = sesiones_de_ventana(hwnd)
+	if not propias:
+		raise ErrorAudio(f"{_programa_de(hwnd)} no está reproduciendo sonido.")
+	# Todas sus sesiones quedan iguales: si alguna suena, se silencian todas.
+	silenciar = any(not s.silenciada for s in propias)
+	for sesion in propias:
+		if sesion.silenciada != silenciar:
+			alternar_silencio_sesion(sesion.clave)
+	return f"{_programa_de(hwnd)} " + ("silenciada" if silenciar else "con sonido")
+
+
+def decir_volumen_ventana(hwnd: int) -> str:
+	propias = sesiones_de_ventana(hwnd)
+	if not propias:
+		return f"{_programa_de(hwnd)} no está reproduciendo sonido."
+	sesion = propias[0]
+	return f"{_programa_de(hwnd)}: {sesion.volumen} %" + (", silenciada" if sesion.silenciada else "")

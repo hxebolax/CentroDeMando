@@ -123,6 +123,9 @@ class Controlador:
 	def iniciar(self) -> None:
 		self.servicio.establecer_reglas(self.reglas())
 		self.servicio.iniciar()
+		self.temporizadores.al_vencer = lambda t: wx.CallAfter(self._al_vencer_temporizador, t)
+		self.temporizadores.al_cambiar = lambda: wx.CallAfter(self._al_cambiar_temporizadores)
+		self.temporizadores.iniciar()
 		try:
 			self.notificaciones.iniciar()
 		except Exception:  # noqa: BLE001 - sin notificaciones, el resto sigue funcionando
@@ -142,6 +145,8 @@ class Controlador:
 		self.servicio.detener()
 		self.portapapeles.detener()
 		self.notificaciones.detener()
+		if getattr(self, "_temporizadores", None) is not None:
+			self._temporizadores.detener()
 
 	# ── Preferencias ────────────────────────────────────────────────────────
 
@@ -377,8 +382,23 @@ class Controlador:
 				"decir_audio": self.decir_audio,
 			}[accion]
 			wx.CallAfter(metodo)
+		elif accion in ("audio_app_subir", "audio_app_bajar", "audio_app_silenciar", "audio_app_decir"):
+			# La ventana se mira AHORA, en el hilo de las teclas, antes de que cambie el foco.
+			wx.CallAfter(self.audio_aplicacion_activa, accion, w32.ventana_activa())
 		elif accion == "decir_estado_sistema":
 			wx.CallAfter(self.decir_estado_sistema)
+		elif accion in ("nuevo_temporizador", "nueva_alarma"):
+			wx.CallAfter(self._abrir_desde_lanzador, accion)
+		elif accion == "decir_temporizadores":
+			wx.CallAfter(self.decir_temporizadores)
+		elif accion == "siempre_encima":
+			from app.services import procesos
+
+			hwnd = w32.ventana_activa()
+			if hwnd:
+				encima = not procesos.esta_encima(hwnd)
+				procesos.poner_encima(hwnd, encima)
+				wx.CallAfter(self.hablar, _("Siempre encima") if encima else _("Ya no está siempre encima"), True)
 		elif accion == "bloquear_equipo":
 			from app.services import equipo
 
@@ -637,6 +657,21 @@ class Controlador:
 
 		self._audio(texto)
 
+	def audio_aplicacion_activa(self, accion: str, hwnd: int) -> None:
+		"""Volumen solo del programa que tiene el foco."""
+		from app.services import audio
+
+		if not hwnd or w32.pid(hwnd) == os.getpid():
+			self.avisar(_("Ponga el foco en el programa cuyo sonido quiere cambiar."))
+			return
+		funciones = {
+			"audio_app_subir": lambda: audio.cambiar_volumen_ventana(hwnd, 5),
+			"audio_app_bajar": lambda: audio.cambiar_volumen_ventana(hwnd, -5),
+			"audio_app_silenciar": lambda: audio.alternar_silencio_ventana(hwnd),
+			"audio_app_decir": lambda: audio.decir_volumen_ventana(hwnd),
+		}
+		self._audio(funciones[accion])
+
 	def decir_estado_sistema(self) -> None:
 		from app.services import equipo
 
@@ -652,9 +687,48 @@ class Controlador:
 			log.exception("No se pudo abrir la configuración de privacidad")
 		self.notificaciones.consultar_ya()
 
+	# ── Temporizadores ──────────────────────────────────────────────────────
+
+	@property
+	def temporizadores(self):
+		if getattr(self, "_temporizadores", None) is None:
+			from app.services.temporizadores import ServicioTemporizadores
+
+			self._temporizadores = ServicioTemporizadores()
+		return self._temporizadores
+
+	def _al_vencer_temporizador(self, temporizador) -> None:
+		from app.ui.area_temporizadores import DialogoAviso
+
+		DialogoAviso(self, temporizador).abrir()
+		self._al_cambiar_temporizadores()
+
+	def _al_cambiar_temporizadores(self) -> None:
+		if self.ventana and self.ventana.IsShown() and self.ventana.area_actual() is self.ventana.area_temporizadores:
+			self.ventana.area_temporizadores.refrescar()
+
+	def decir_temporizadores(self) -> None:
+		from app.services.temporizadores import describir_duracion
+
+		activos = [t for t in self.temporizadores.todos() if t.activo]
+		if not activos:
+			self.hablar(_("No hay temporizadores ni alarmas en marcha."), True)
+			return
+		self.hablar("; ".join(f"{t.nombre}: {describir_duracion(t.restante())}" for t in activos[:5]), True)
+
 	# ── Lanzador ────────────────────────────────────────────────────────────
 
-	AREAS = ("Escritorios", "Portapapeles", "Fragmentos de texto", "Emoticonos", "Notificaciones", "Audio", "Sistema")
+	AREAS = (
+		"Escritorios",
+		"Portapapeles",
+		"Fragmentos de texto",
+		"Emoticonos",
+		"Notificaciones",
+		"Audio",
+		"Sistema",
+		"Ventanas y procesos",
+		"Temporizadores y alarmas",
+	)
 
 	@property
 	def catalogo_lanzador(self):

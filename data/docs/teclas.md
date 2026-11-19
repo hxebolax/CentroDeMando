@@ -41,6 +41,16 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Control+Alt+Windows+F12: decir el estado del equipo.
 - Sin tecla de fábrica (asígnelas en Teclas globales): pegar el elemento 1 a 9 del historial, silenciar el sonido general, decir el estado del audio, bloquear el equipo y apagar la pantalla.
 
+## Globales: sonido de la aplicación activa
+
+- Control+Alt+Mayúsculas+Windows+Flecha arriba y abajo: subir y bajar su volumen.
+- Control+Alt+Mayúsculas+Windows+Fin: silenciarla o activarla.
+- Control+Alt+Mayúsculas+Windows+Inicio: decir su volumen.
+
+## Globales: ventanas
+
+- Control+Alt+Windows+K: poner o quitar la ventana activa siempre encima.
+
 ## Globales: lanzador
 
 - Control+Alt+Windows+Espacio: lanzador (programas, ajustes, acciones y cálculos).
@@ -53,7 +63,7 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 
 ## En la ventana principal
 
-- Alt+1 a Alt+7: áreas de escritorios, portapapeles, fragmentos, emoticonos, notificaciones, audio y sistema.
+- Alt+1 a Alt+9: áreas de escritorios, portapapeles, fragmentos, emoticonos, notificaciones, audio, sistema, ventanas y procesos, y temporizadores.
 - Control+E: al buscador del área. Control+L: lista rápida del área. Control+Mayúsculas+P: lanzador.
 - Alt+C: menú Acción (las órdenes del área actual).
 - Control+Tabulador: área siguiente.
@@ -120,6 +130,18 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 ## Sistema
 
 - Estado del equipo: Alt+E. Las órdenes de energía, en el menú Acción o con la tecla Aplicaciones.
+
+## Ventanas y procesos
+
+- Alt+B: buscar. Alt+L: ventanas. Alt+P: procesos.
+- Intro en una ventana: activarla. Suprimir: cerrarla.
+- Suprimir en un proceso: finalizarlo.
+
+## Temporizadores y alarmas
+
+- Alt+L: lista. Espacio: decir lo que queda. Suprimir: eliminar.
+- Nuevo temporizador, nueva alarma y pausar: tecla Aplicaciones o menú Acción.
+- En el aviso: Posponer 5 minutos (Alt+P) o Detener (Alt+D, Escape).
 
 ## Lanzador
 
