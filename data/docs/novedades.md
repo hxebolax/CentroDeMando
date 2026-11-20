@@ -1,5 +1,12 @@
 # Novedades de Centro de Mando
 
+## 1.3.0
+
+- **Cambio automático al dispositivo preferido**: ordene sus salidas y micrófonos favoritos (área de audio, menú Acción) y, al conectar los auriculares, el sonido pasa a ellos; al apagarlos, vuelve al siguiente de la lista. Se recuerdan por nombre, aunque cambien de puerto.
+- **Silenciar al bloquear el equipo**: con Windows+L se silencian las aplicaciones y el micrófono, y al volver recuperan el sonido. El lector de pantalla no se silencia nunca (Opciones, Audio).
+- **Copias de seguridad automáticas** cada día, con las 7 últimas guardadas (Opciones, Copias de seguridad).
+- **Exportar e importar la configuración y los datos** (menú Herramientas): opciones, teclas, reglas, perfiles, fragmentos, alarmas e historiales en un ZIP, para otro equipo o como copia. Al importar se guarda antes lo que había y se aplica al reiniciar, que se puede hacer en ese momento.
+
 ## 1.2.0
 
 Audio, mucho más completo:

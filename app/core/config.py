@@ -176,6 +176,19 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"bloquear_micro": False,
 		"volumen_micro_bloqueado": 80,
 		"silenciar_micro_al_iniciar": False,
+		# Al bloquear el equipo, silenciar las aplicaciones (nunca el lector) y el micrófono.
+		"silenciar_al_bloquear": False,
+		# Pasar solo al dispositivo preferido cuando se conecta o desconecta alguno.
+		"cambio_automatico_salida": False,
+		"preferencias_salida": [],
+		"cambio_automatico_entrada": False,
+		"preferencias_entrada": [],
+	},
+	"copias": {
+		# Copia de seguridad diaria en data/backups (configuración, fragmentos, historiales...).
+		"automaticas": True,
+		"conservar": 7,
+		"incluir_portapapeles": True,
 	},
 	# Calla los avisos automáticos (notificaciones, dispositivos, copias).
 	"no_molestar": {

@@ -181,6 +181,8 @@ class Controlador:
 		self._iniciar_vigilante_audio()
 		wx.CallAfter(self._vigilar_no_molestar)
 		wx.CallAfter(self._vigilar_microfono)
+		wx.CallLater(1500, self.aplicar_preferencias_audio, False)
+		wx.CallLater(30_000, self._copia_automatica)
 		if self.config.obtener("audio.silenciar_micro_al_iniciar", False):
 			from app.services import audio
 
@@ -893,10 +895,73 @@ class Controlador:
 		]
 		self.hablar(". ".join(partes), True)
 
+	def aplicar_preferencias_audio(self, anunciar: bool = True) -> None:
+		"""Pone como predeterminados la salida y el micrófono preferidos que estén conectados."""
+		from app.services import audio
+		from app.services.preferencias_audio import cambio_necesario
+
+		for entrada in (False, True):
+			sufijo = "entrada" if entrada else "salida"
+			if not self.config.obtener(f"audio.cambio_automatico_{sufijo}", False):
+				continue
+			preferencias = [str(n) for n in self.config.obtener(f"audio.preferencias_{sufijo}", []) if isinstance(n, str)]
+			try:
+				conectados = audio.dispositivos_entrada() if entrada else audio.dispositivos_salida()
+				elegido = cambio_necesario(preferencias, conectados)
+				if elegido is None:
+					continue
+				if entrada:
+					audio.poner_predeterminado_entrada(elegido)
+				else:
+					audio.poner_predeterminado(elegido)
+			except Exception:  # noqa: BLE001
+				log.warning("No se pudo pasar al dispositivo preferido", exc_info=True)
+				continue
+			log.info("Dispositivo preferido puesto (%s): %s", sufijo, elegido.nombre)
+			if anunciar and not self.no_molestar_activo():
+				self.hablar((_("Micrófono: {d}") if entrada else _("Salida: {d}")).format(d=elegido.nombre))
+		if self.ventana and self.ventana.area_actual() is self.ventana.area_audio:
+			self.ventana.area_audio.refrescar()
+
+	def _vigilar_sesion(self) -> None:
+		"""Al bloquear el equipo silencia las aplicaciones y el micrófono; al volver, lo devuelve."""
+		from app.services import audio, sesion
+
+		bloqueada = sesion.sesion_bloqueada()
+		if bloqueada is None or bloqueada == getattr(self, "_sesion_bloqueada", False):
+			return
+		self._sesion_bloqueada = bloqueada
+		if bloqueada:
+			if not self.config.obtener("audio.silenciar_al_bloquear", False):
+				return
+			try:
+				self._silenciadas_al_bloquear = audio.silenciar_salvo_lectores()
+				self._micro_silenciado_al_bloquear = not audio.volumen_entrada()[1]
+				if self._micro_silenciado_al_bloquear:
+					audio.poner_silencio_entrada(True)
+				log.info("Equipo bloqueado: %d aplicaciones silenciadas.", len(self._silenciadas_al_bloquear))
+			except Exception:  # noqa: BLE001
+				log.warning("No se pudo silenciar al bloquear", exc_info=True)
+			return
+		try:
+			devueltas = audio.quitar_silencio(getattr(self, "_silenciadas_al_bloquear", []))
+			if getattr(self, "_micro_silenciado_al_bloquear", False):
+				audio.poner_silencio_entrada(False)
+			if devueltas or getattr(self, "_micro_silenciado_al_bloquear", False):
+				log.info("Equipo desbloqueado: sonido devuelto a %d aplicaciones.", devueltas)
+		except Exception:  # noqa: BLE001
+			log.warning("No se pudo devolver el sonido al desbloquear", exc_info=True)
+		self._silenciadas_al_bloquear = []
+		self._micro_silenciado_al_bloquear = False
+
 	def _vigilar_microfono(self) -> None:
 		"""Cada 2 segundos, si está pedido, devuelve el micrófono a su volumen fijo."""
 		from app.services import audio
 
+		try:
+			self._vigilar_sesion()
+		except Exception:  # noqa: BLE001
+			log.debug("No se pudo vigilar la sesión", exc_info=True)
 		if self.config.obtener("audio.bloquear_micro", False):
 			objetivo = min(max(int(self.config.obtener("audio.volumen_micro_bloqueado", 80)), 0), 100)
 			try:
@@ -907,6 +972,19 @@ class Controlador:
 			except Exception:  # noqa: BLE001 - sin micrófono o desconectado
 				log.debug("No se pudo vigilar el volumen del micrófono", exc_info=True)
 		self._temporizador_micro = wx.CallLater(2000, self._vigilar_microfono)
+
+	def _copia_automatica(self) -> None:
+		"""Copia de seguridad diaria, en un hilo para no frenar la interfaz."""
+		if not self.config.obtener("copias.automaticas", True):
+			return
+		from app.core.version import APP_VERSION
+		from app.services import copias
+
+		conservar = max(1, int(self.config.obtener("copias.conservar", 7)))
+		con_portapapeles = bool(self.config.obtener("copias.incluir_portapapeles", True))
+		threading.Thread(
+			target=copias.copia_automatica, args=(APP_VERSION, conservar, con_portapapeles), name="copia-seguridad", daemon=True
+		).start()
 
 	def decir_audio(self) -> None:
 		from app.services import audio
@@ -947,7 +1025,9 @@ class Controlador:
 
 		try:
 			self._vigilante_audio = audio.VigilanteDispositivos(
-				al_cambiar, con_pantallas=lambda: bool(self.config.obtener("anuncios.dispositivos_pantallas", False))
+				al_cambiar,
+				con_pantallas=lambda: bool(self.config.obtener("anuncios.dispositivos_pantallas", False)),
+				al_estabilizar=lambda: wx.CallAfter(self.aplicar_preferencias_audio),
 			)
 			self._vigilante_audio.iniciar()
 		except Exception:  # noqa: BLE001 - sin avisos de dispositivos, el resto sigue

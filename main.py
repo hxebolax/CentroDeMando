@@ -28,6 +28,8 @@ Argumentos:
   ``.exe`` recién compilado.
 - ``--inicio-windows``: lo pone el inicio automático; arranca oculto en la
   bandeja si así está configurado.
+- ``--esperar-pid N``: espera (hasta 20 s) a que termine el proceso N antes de
+  comprobar la instancia única. Lo usa el reinicio tras importar una copia.
 """
 
 from __future__ import annotations
@@ -48,6 +50,25 @@ log = logging.getLogger("app.main")
 ARGUMENTO_COMPROBAR = "--comprobar-arranque"
 # Lo añade la entrada de inicio automático (app/services/sistema.py).
 ARGUMENTO_INICIO_WINDOWS = "--inicio-windows"
+ARGUMENTO_ESPERAR = "--esperar-pid"
+
+
+def _esperar_proceso(argumentos: list[str]) -> None:
+	"""Con ``--esperar-pid N``, espera a que el proceso N (la instancia que se reinicia) termine."""
+	if ARGUMENTO_ESPERAR not in argumentos:
+		return
+	posicion = argumentos.index(ARGUMENTO_ESPERAR)
+	try:
+		pid = int(argumentos[posicion + 1])
+	except (IndexError, ValueError):
+		return
+	import ctypes
+
+	sincronizar = 0x00100000  # SYNCHRONIZE
+	manejador = ctypes.windll.kernel32.OpenProcess(sincronizar, False, pid)
+	if manejador:
+		ctypes.windll.kernel32.WaitForSingleObject(manejador, 20000)
+		ctypes.windll.kernel32.CloseHandle(manejador)
 
 # Objetos que deben vivir toda la sesión: si el recolector se llevara el
 # wx.Locale, los botones volverían al inglés; si se llevara el comprobador de
@@ -165,6 +186,7 @@ def _principal(argumentos: list[str]) -> int:
 
 	from app.core.instancia_unica import InstanciaUnica
 
+	_esperar_proceso(argumentos)
 	instancia = InstanciaUnica(ID_APLICACION)
 	_VIVOS["instancia"] = instancia
 	if instancia.hay_otra():
@@ -174,6 +196,13 @@ def _principal(argumentos: list[str]) -> int:
 
 			mostrar_mensaje(None, _("{nombre} ya está en ejecución.").format(nombre=NOMBRE_APLICACION), NOMBRE_APLICACION)
 		return 0
+
+	# Una copia importada se coloca ahora: ya es la única instancia y aún no
+	# hay ninguna base de datos abierta. Después se relee la configuración.
+	from app.services import copias
+
+	if copias.hay_importacion_pendiente() and copias.aplicar_importacion_pendiente(APP_VERSION):
+		configuracion = Configuracion()
 
 	# 5. Aviso por voz antes de lo pesado (el lector habla aunque estemos ocupados).
 	if not comprobar and configuracion.obtener("general.anunciar_arranque", True):

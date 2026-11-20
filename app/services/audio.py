@@ -483,6 +483,57 @@ def dispositivos_entrada() -> list[Dispositivo]:
 	]
 
 
+def nombres_conocidos(entrada: bool = False) -> list[str]:
+	"""Nombres de todas las salidas (o entradas) que Windows conoce, conectadas o no.
+
+	Primero las conectadas; sin repetir nombres (un monitor HDMI aparece varias veces).
+	"""
+	utilidades, flujos, _roles, estados = _pycaw()
+	flujo = flujos.eCapture.value if entrada else flujos.eRender.value
+	activos, resto = [], []
+	for dispositivo in utilidades.GetAllDevices(flujo, estados.MASK_ALL.value):
+		nombre = dispositivo.FriendlyName or ""
+		estado = getattr(dispositivo.state, "value", dispositivo.state)
+		(activos if estado == 1 else resto).append(nombre)
+	vistos: set[str] = set()
+	resultado = []
+	for nombre in activos + sorted(resto, key=str.casefold):
+		if nombre and nombre.casefold() not in vistos:
+			vistos.add(nombre.casefold())
+			resultado.append(nombre)
+	return resultado
+
+
+def silenciar_salvo_lectores() -> list[str]:
+	"""Silencia todas las aplicaciones con sonido menos los lectores de pantalla.
+
+	Devuelve las claves de las que silenció (las que ya lo estaban no se tocan),
+	para devolverles el sonido después con ``quitar_silencio``.
+	"""
+	silenciadas = []
+	for sesion in sesiones():
+		if sesion.silenciada or not sesion.pid or sesion.nombre.casefold() in LECTORES:
+			continue
+		try:
+			_sesion(sesion.clave).SimpleAudioVolume.SetMute(True, None)
+			silenciadas.append(sesion.clave)
+		except ErrorAudio:
+			continue
+	return silenciadas
+
+
+def quitar_silencio(claves: list[str]) -> int:
+	"""Devuelve el sonido a las aplicaciones de ``claves`` que sigan abiertas."""
+	devueltas = 0
+	for clave in claves:
+		try:
+			_sesion(clave).SimpleAudioVolume.SetMute(False, None)
+			devueltas += 1
+		except ErrorAudio:
+			continue
+	return devueltas
+
+
 # ── Quién usa el micrófono o la cámara ───────────────────────────────────────
 
 _CONSENTIMIENTOS = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore"
@@ -881,10 +932,13 @@ class VigilanteDispositivos:
 	  desconecta y conecta sin que nadie haya tocado nada.
 	"""
 
-	def __init__(self, al_cambiar, con_pantallas=None, espera: float = 2.5) -> None:
+	def __init__(self, al_cambiar, con_pantallas=None, espera: float = 2.5, al_estabilizar=None) -> None:
 		import threading
 
 		self._al_cambiar = al_cambiar
+		# Se llama (desde el hilo del temporizador) cada vez que algo se conectó o
+		# desconectó de verdad: para pasar al dispositivo preferido.
+		self._al_estabilizar = al_estabilizar
 		self._con_pantallas = con_pantallas or (lambda: False)
 		self._espera = espera
 		self._enumerador = None
@@ -965,6 +1019,8 @@ class VigilanteDispositivos:
 				pantallas = {p.nombre for p in self._puntos.values() if p.pantalla}
 				avisos = cambios_de_conexion(self._anunciado, todos)
 				self._anunciado = todos
+			if avisos and self._al_estabilizar is not None:
+				self._al_estabilizar()
 			if not self._con_pantallas():
 				avisos = [a for a in avisos if a.split(": ", 1)[1] not in pantallas]
 			for aviso in avisos:

@@ -250,6 +250,18 @@ Además de lo de cada lista:
 - **Usar como salida de comunicaciones** y **Usar como micrófono de comunicaciones**: Windows tiene dos dispositivos por defecto, el general y el de comunicaciones (el que usan Teams, WhatsApp, Discord o Skype para las llamadas). Así puede oír la música por los altavoces y las llamadas por los auriculares. Intro en las listas cambia el general y deja el de comunicaciones como estaba.
 - **Guardar el audio actual como perfil**, **Aplicar un perfil de audio** y **Eliminar un perfil de audio**: un perfil recuerda la salida y el micrófono, los de comunicaciones y los dos volúmenes. Por ejemplo «Auriculares» y «Altavoces», o «Reuniones». Si un dispositivo del perfil no está conectado, se aplica el resto y se dice cuál falta. Los dispositivos se buscan también por su nombre, por si Windows les cambió el identificador.
 - **Quién usa el micrófono o la cámara**: dice qué programas los están usando ahora mismo (lo mismo que el icono de privacidad de la barra de tareas).
+- **Salidas preferidas al conectar** y **Micrófonos preferidos al conectar**: ver el apartado siguiente.
+
+### Cambiar solo al dispositivo preferido
+
+Por ejemplo: que al encender los auriculares Bluetooth el sonido pase a ellos, y al apagarlos vuelva a los altavoces, sin tocar nada.
+
+1. En el área de audio, menú Acción, elija **Salidas preferidas al conectar** (o **Micrófonos preferidos al conectar**).
+2. Marque **Cambiar solo a la salida preferida al conectar o desconectar** (Alt+O).
+3. En la lista **Dispositivos en orden de preferencia** (Alt+D) están todos los que Windows conoce, aunque no estén conectados ahora. Marque con Espacio los que quiere usar y ordénelos con **Subir** (Alt+U) y **Bajar** (Alt+B), o con Alt+Mayúsculas+flechas arriba y abajo en la lista. Arriba, el que más prefiere.
+4. Aceptar.
+
+Cada vez que se conecta o desconecta un dispositivo, Centro de Mando pone como predeterminado el primero marcado que esté conectado y dice «Salida: Auriculares». Se recuerdan por su nombre, así que valen aunque los conecte a otro puerto. Cambia el predeterminado general y el de comunicaciones a la vez. Con No molestar activo, cambia igual pero sin decirlo.
 
 En el menú Acción y el contextual de la lista de aplicaciones:
 
@@ -272,6 +284,9 @@ En Opciones, pestaña **Audio**:
 
 - **Bloquear el volumen del micrófono** y **Volumen fijo del micrófono**: algunos programas (Teams, Chrome, Zoom, ciertos controladores) suben o bajan el micrófono por su cuenta. Con esto marcado, Centro de Mando lo devuelve al volumen fijo en un par de segundos. Si lo cambia usted desde Centro de Mando (deslizador o teclas globales), ese pasa a ser el volumen fijo.
 - **Silenciar el micrófono al arrancar**: al abrir Centro de Mando (también al iniciar Windows) el micrófono queda silenciado; Control+Alt+Windows+M lo activa.
+- **Silenciar las aplicaciones y el micrófono al bloquear el equipo**: al bloquear con Windows+L se silencian las aplicaciones que suenan y el micrófono; al desbloquear, recuperan el sonido solo las que silenció Centro de Mando. El lector de pantalla no se silencia nunca, para que pueda seguir oyéndolo en la pantalla de bloqueo.
+
+Audio mono (oír por los dos oídos lo que va por un solo canal) es una opción de Windows que Centro de Mando no puede cambiar al momento: en el lanzador escriba «mono» o vaya a Configuración, Accesibilidad, Audio.
 
 ### El sonido de la aplicación que tiene delante
 
@@ -345,13 +360,22 @@ Herramientas, Opciones (Control+coma), con pestañas:
 - **Portapapeles**: guardar o no, máximo de elementos, caducidad en días, formatos que se guardan, tamaño de imagen, privacidad, programas excluidos, restaurar tras pegar, forma de pegar y anunciar cada copia.
 - **Emoticonos**: forma de insertar, tono de piel, mostrar el carácter y cuántos recientes se recuerdan.
 - **Notificaciones**: guardar o no, cada cuánto se consulta, anunciar las nuevas (todas o solo las de algunas aplicaciones), marcar como leídas, aplicaciones ignoradas, máximo y días.
-- **Audio**: bloquear el volumen del micrófono y silenciarlo al arrancar.
+- **Audio**: bloquear el volumen del micrófono, silenciarlo al arrancar y silenciar al bloquear el equipo.
+- **Copias de seguridad**: copia automática diaria, cuántas se conservan y si incluyen el historial del portapapeles.
 - **No molestar**: activarlo ahora, horario diario y aplicaciones que se anuncian igualmente.
 - **Ventanas**: seguir a la ventana al moverla y aplicar las reglas al iniciar.
 - **Actualizaciones**: de dónde buscarlas y cada cuánto.
 - **Avanzado**: hacer cíclicas las teclas de Windows, sondeo de escritorios y nivel de registro.
 
 Los cambios se aplican al momento.
+
+## Copias de seguridad, exportar e importar
+
+Una copia guarda la configuración (opciones, teclas globales, reglas, perfiles de audio, dispositivos preferidos...), los fragmentos, los temporizadores y alarmas y los historiales de notificaciones y del portapapeles. No guarda los registros.
+
+- **Copia automática**: una vez al día, al rato de arrancar, se guarda una en `data\backups` con el nombre `copia_automatica_` y la fecha. Se conservan las 7 últimas (Opciones, Copias de seguridad, para cambiarlo o desactivarlo). Herramientas, **Abrir la carpeta de copias de seguridad**, las muestra.
+- **Exportar** (Herramientas, **Exportar la configuración y los datos**): guarda un ZIP donde elija, para pasarlo a otro equipo o guardarlo aparte. Pregunta si incluir el historial del portapapeles, porque puede tener textos privados.
+- **Importar** (Herramientas, **Importar la configuración y los datos**): elija una copia exportada o automática. Dice qué trae y de qué versión, y pide confirmación. Lo de ahora no se pierde: antes de sustituirlo se guarda en `data\backups` como `antes_de_importar_` con la fecha. La copia se coloca al reiniciar Centro de Mando, cuando todavía no hay nada abierto; puede reiniciarlo en ese momento.
 
 ## La bandeja del sistema
 

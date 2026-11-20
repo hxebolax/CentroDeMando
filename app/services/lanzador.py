@@ -56,6 +56,7 @@ AJUSTES: list[tuple[str, str, str]] = [
 	("Pantalla", "ms-settings:display", "monitor resolución escala brillo"),
 	("Sonido", "ms-settings:sound", "audio altavoces micrófono volumen"),
 	("Dispositivos de sonido", "ms-settings:sound-devices", "audio salida entrada"),
+	("Audio mono y accesibilidad del audio", "ms-settings:easeofaccess-audio", "mono monoaural un oído canal sonido accesibilidad"),
 	("Mezclador de volumen", "ms-settings:apps-volume", "audio aplicaciones volumen"),
 	("Notificaciones", "ms-settings:notifications", "avisos no molestar"),
 	("No molestar y asistente de concentración", "ms-settings:quiethours", "concentración silencio"),

@@ -376,8 +376,49 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				"Al abrir Centro de Mando (por ejemplo al iniciar Windows) el micrófono predeterminado queda silenciado. Control+Alt+Windows+M lo activa.",
 			),
 			Opcion(
+				"audio.silenciar_al_bloquear",
+				"Silenciar las aplicaciones y el micrófono al b&loquear el equipo",
+				"Al bloquear el equipo (Windows+L) se silencian las aplicaciones con sonido y el micrófono; al volver, recuperan "
+				"el sonido. El lector de pantalla no se silencia nunca.",
+			),
+			Opcion(
+				"",
+				"Las salidas y micrófonos preferidos al conectar se eligen en el área de audio, menú Acción.",
+				"",
+				"nota",
+			),
+			Opcion(
 				"",
 				"Los perfiles de audio se guardan y se aplican en el área de audio, menú Acción; la tecla global «Aplicar el siguiente perfil de audio» se asigna en Teclas globales.",
+				"",
+				"nota",
+			),
+		],
+	),
+	(
+		"Copias de seguridad",
+		[
+			Opcion(
+				"copias.automaticas",
+				"&Hacer una copia de seguridad automática cada día",
+				"Una vez al día, al rato de arrancar, guarda en data\\backups la configuración, los fragmentos, las alarmas y los historiales.",
+			),
+			Opcion(
+				"copias.conservar",
+				"&Número de copias automáticas que se conservan:",
+				"Al pasarse, se borran las más antiguas.",
+				"int",
+				1,
+				60,
+			),
+			Opcion(
+				"copias.incluir_portapapeles",
+				"&Incluir el historial del portapapeles en las copias automáticas",
+				"Puede ocupar bastante si guarda imágenes, y contener textos privados que haya copiado.",
+			),
+			Opcion(
+				"",
+				"Para exportar o importar a mano: menú Herramientas, Exportar o Importar la configuración y los datos.",
 				"",
 				"nota",
 			),

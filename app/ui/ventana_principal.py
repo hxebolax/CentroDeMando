@@ -111,6 +111,20 @@ MENUS: list[tuple[str, list[tuple[str, str, str, int] | None]]] = [
 			("reglas", "&Reglas de ventanas...\tCtrl+R", "Llevar automáticamente las ventanas de ciertos programas a un escritorio.", wx.ITEM_NORMAL),
 			("opciones", "&Opciones...\tCtrl+,", "Opciones de Centro de Mando.", wx.ITEM_NORMAL),
 			None,
+			(
+				"exportar_copia",
+				"&Exportar la configuración y los datos...",
+				"Guarda en un archivo ZIP las opciones, teclas, reglas, perfiles, fragmentos, alarmas e historiales, para otro equipo o como copia.",
+				wx.ITEM_NORMAL,
+			),
+			(
+				"importar_copia",
+				"&Importar la configuración y los datos...",
+				"Recupera una copia exportada o automática. Se aplica al reiniciar Centro de Mando; antes se guarda una copia de lo actual.",
+				wx.ITEM_NORMAL,
+			),
+			("carpeta_copias", "Abrir la carpeta de &copias de seguridad", "Abre la carpeta donde se guardan las copias automáticas diarias.", wx.ITEM_NORMAL),
+			None,
 			("carpeta_datos", "Abrir la carpeta de &datos", "Abre en el Explorador la carpeta data del programa.", wx.ITEM_NORMAL),
 			("carpeta_registros", "Abrir la carpeta de re&gistros", "Abre en el Explorador la carpeta de registros.", wx.ITEM_NORMAL),
 		],
@@ -1420,6 +1434,96 @@ class VentanaPrincipal(wx.Frame):
 
 	def _al_carpeta_registros(self, _evento: wx.CommandEvent | None) -> None:
 		self._abrir_carpeta(paths.ruta_registros())
+
+	def _al_carpeta_copias(self, _evento: wx.CommandEvent | None) -> None:
+		from app.services import copias
+
+		self._abrir_carpeta(copias.ruta_copias())
+
+	def _al_exportar_copia(self, _evento: wx.CommandEvent | None) -> None:
+		import time
+
+		from app.core.version import APP_VERSION
+		from app.services import copias
+
+		with wx.FileDialog(
+			self,
+			_("Exportar la configuración y los datos"),
+			defaultFile=f"CentroDeMando_copia_{time.strftime('%Y%m%d')}.zip",
+			wildcard=_("Copia de Centro de Mando (*.zip)|*.zip"),
+			style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+		) as dialogo:
+			if dialogo.ShowModal() != wx.ID_OK:
+				return
+			destino = Path(dialogo.GetPath())
+		con_portapapeles = confirmar(
+			self,
+			_("¿Incluir también el historial del portapapeles? Puede contener textos privados que haya copiado."),
+			_("Exportar"),
+		) == wx.ID_YES
+		try:
+			with wx.BusyCursor():
+				self._config.guardar()
+				copias.crear_copia(destino, APP_VERSION, con_portapapeles)
+		except (copias.ErrorCopia, OSError) as error:
+			mostrar_mensaje(self, _("No se pudo exportar: {e}").format(e=error), _("Exportar"), wx.ICON_ERROR)
+			return
+		self.controlador.hablar(_("Exportado a {n}").format(n=destino.name), True)
+
+	def _al_importar_copia(self, _evento: wx.CommandEvent | None) -> None:
+		from app.services import copias
+
+		with wx.FileDialog(
+			self,
+			_("Importar la configuración y los datos"),
+			defaultDir=str(copias.ruta_copias()),
+			wildcard=_("Copia de Centro de Mando (*.zip)|*.zip"),
+			style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
+		) as dialogo:
+			if dialogo.ShowModal() != wx.ID_OK:
+				return
+			origen = Path(dialogo.GetPath())
+		try:
+			informacion = copias.leer_copia(origen)
+		except copias.ErrorCopia as error:
+			mostrar_mensaje(self, str(error), _("Importar"), wx.ICON_ERROR)
+			return
+		que = _("{n} archivos de la versión {v}, del {f}").format(n=len(informacion.archivos), v=informacion.version or "?", f=informacion.fecha or "?")
+		if confirmar(
+			self,
+			_("La copia trae {que}. Sustituirá la configuración y los datos actuales (antes se guarda una copia de lo que hay). "
+			"Se aplica al reiniciar Centro de Mando. ¿Continuar?").format(que=que),
+			_("Importar"),
+			peligroso=True,
+		) != wx.ID_YES:
+			return
+		try:
+			copias.preparar_importacion(origen)
+		except (copias.ErrorCopia, OSError) as error:
+			mostrar_mensaje(self, _("No se pudo importar: {e}").format(e=error), _("Importar"), wx.ICON_ERROR)
+			return
+		if confirmar(self, _("Copia lista. ¿Reiniciar Centro de Mando ahora para aplicarla?"), _("Importar")) == wx.ID_YES:
+			self.reiniciar()
+		else:
+			self.controlador.hablar(_("La copia se aplicará la próxima vez que abra Centro de Mando."), True)
+
+	def reiniciar(self) -> None:
+		"""Abre otra instancia que espera a que esta termine, y sale."""
+		import subprocess
+		import sys
+
+		if getattr(sys, "frozen", False):
+			orden = [sys.executable]
+		else:
+			orden = [sys.executable, str(paths.ruta_base() / "main.py")]
+		orden += ["--esperar-pid", str(os.getpid())]
+		try:
+			subprocess.Popen(orden, cwd=str(paths.ruta_base()), close_fds=True)  # noqa: S603 - nuestro propio programa
+		except OSError:
+			log.exception("No se pudo reiniciar")
+			mostrar_mensaje(self, _("No se pudo reiniciar. Cierre y vuelva a abrir Centro de Mando."), _("Reiniciar"), wx.ICON_WARNING)
+			return
+		self.salir()
 
 	# ── Manejadores: Ayuda ───────────────────────────────────────────────────
 

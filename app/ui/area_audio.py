@@ -333,6 +333,27 @@ class AreaAudio(wx.Panel):
 			self.controlador.hablar(_("Micrófono de comunicaciones: {m}").format(m=micro.nombre), True)
 			self.refrescar()
 
+	# ── Dispositivos preferidos ─────────────────────────────────────────────
+
+	def preferencias(self, entrada: bool) -> None:
+		from app.ui.dialogo_preferencias_audio import DialogoPreferenciasAudio
+
+		sufijo = "entrada" if entrada else "salida"
+		config = self.controlador.config
+		conocidos = self._intentar(audio.nombres_conocidos, entrada) or []
+		guardadas = [n for n in config.obtener(f"audio.preferencias_{sufijo}", []) if isinstance(n, str)]
+		with DialogoPreferenciasAudio(
+			self, entrada, bool(config.obtener(f"audio.cambio_automatico_{sufijo}", False)), guardadas, conocidos
+		) as dialogo:
+			if dialogo.ShowModal() != wx.ID_OK:
+				return
+			activo, orden = dialogo.resultado()
+		config.establecer(f"audio.cambio_automatico_{sufijo}", activo)
+		config.establecer(f"audio.preferencias_{sufijo}", orden)
+		config.guardar()
+		if activo:
+			self.controlador.aplicar_preferencias_audio()
+
 	# ── Perfiles ────────────────────────────────────────────────────────────
 
 	def guardar_perfil(self) -> None:
@@ -504,6 +525,9 @@ class AreaAudio(wx.Panel):
 			(_("Apl&icar un perfil de audio..."), self.aplicar_perfil, True),
 			(_("Eliminar un per&fil de audio..."), self.eliminar_perfil, True),
 			(_("&Quién usa el micrófono o la cámara"), self.controlador.decir_privacidad, True),
+			None,
+			(_("Salidas preferidas al cone&ctar..."), lambda: self.preferencias(False), True),
+			(_("Micrófonos preferidos al conect&ar..."), lambda: self.preferencias(True), True),
 			None,
 			(_("Silenciar o activar el sonido &general"), self.controlador.silenciar_general, True),
 			(_("Silenciar o activar el &micrófono"), self.controlador.silenciar_microfono, True),
