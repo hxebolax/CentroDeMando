@@ -826,7 +826,10 @@ class VentanaPrincipal(wx.Frame):
 			"fragmentos_rapido": FragmentosRapido,
 			"lanzador": LanzadorRapido,
 		}.get(accion, EmoticonosRapido)
-		self._selector = clase(self.controlador, destino)
+		if accion == "portapapeles_favoritos":
+			self._selector = PortapapelesRapido(self.controlador, destino, solo_favoritos=True)
+		else:
+			self._selector = clase(self.controlador, destino)
 		self._selector.abrir()
 
 	def _al_area_escritorios(self, _evento: wx.CommandEvent | None) -> None:
@@ -1418,6 +1421,7 @@ class VentanaPrincipal(wx.Frame):
 		self.controlador.aplicar_gancho()
 		self._aplicar_bandeja()
 		self.controlador.avisar_no_molestar()
+		self.controlador.aplicar_cifrado_portapapeles()
 		nivel = str(self._config.obtener("registro.nivel", "INFO")).upper()
 		if nivel in ("DEBUG", "INFO", "WARNING", "ERROR"):
 			logging.getLogger().setLevel(nivel)

@@ -143,6 +143,11 @@ Desde la pestaña Portapapeles de la ventana principal, Intro pega en la ventana
 - En Opciones, Portapapeles, puede excluir programas por su nombre (por ejemplo, `keepass.exe`).
 - En el área de portapapeles, menú Acción, **Detener la captura** deja de guardar hasta que la vuelva a activar.
 - El historial está en `data\db\portapapeles.db`, dentro de la carpeta del programa.
+- **Cifrar el historial** (Opciones, Portapapeles, **Cifrar el historial guardado**): lo copiado se guarda cifrado con la protección de datos de Windows. Solo su usuario de Windows, en este equipo, puede leerlo: si alguien se lleva el archivo a otro equipo o lo abre con otra cuenta, no ve nada. Al marcarlo se cifra también lo que ya había, en segundo plano, y se dice cuando termina; al desmarcarlo se descifra. Se sigue pudiendo buscar con normalidad. Una copia de seguridad que incluya el historial cifrado solo se puede leer con este mismo usuario de Windows: en otro equipo, esos elementos aparecen como «cifrado por otro usuario de Windows».
+
+### Favoritos
+
+F4 marca o quita un favorito. Los favoritos no caducan ni se borran por el límite. Al buscar, salen primero. En Teclas globales, **Favoritos del portapapeles** (sin tecla de fábrica) abre el historial mostrando solo los favoritos, para pegar al momento una firma, una dirección o un texto que use a menudo.
 
 ## Emoticonos
 
@@ -240,8 +245,9 @@ El área tiene tres partes: las salidas, las aplicaciones y los micrófonos. Cad
 - **Volumen del micrófono** (Alt+M) y **Silenciar el micrófono** (Alt+E): los del micrófono seleccionado (si no hay ninguno seleccionado, los del predeterminado).
 - **Escuchar este dispositivo** (Alt+T): se oye el micrófono por los auriculares o altavoces, como la pestaña Escuchar de las propiedades del micrófono en el Panel de sonido de Windows. Sirve para comprobar cómo suena o para oír una entrada de línea. Con altavoces puede acoplarse (un pitido): mejor con auriculares.
 - **Oír el micrófono por** (Alt+O): la salida por la que se oye; «La salida predeterminada» sigue a la que esté en uso.
+- **Amplificación del micrófono** (Alt+L): la «Amplificación de micrófono» de la pestaña Niveles del Panel de sonido, en decibelios (por ejemplo 0, +10, +20 o +30 dB). Sube la señal de micrófonos flojos. Solo la tienen algunos micrófonos, sobre todo los conectados a la tarjeta de sonido; muchos USB y Bluetooth no, y entonces el control dice «No tiene» y queda desactivado.
 
-Windows recuerda estos ajustes aunque se cierre Centro de Mando.
+Windows recuerda estos ajustes aunque se cierre Centro de Mando. Si cambia «Escuchar este dispositivo» desde el Panel de sonido de Windows u otro programa, Centro de Mando también lo dice («Se oye Micrófono USB» o «Ya no se oye...»).
 
 ### Menú Acción del área de audio
 
@@ -267,6 +273,12 @@ En el menú Acción y el contextual de la lista de aplicaciones:
 
 - **Cambiar la salida de la aplicación**: elija por qué dispositivo suena solo esa aplicación (por ejemplo, la música por los altavoces y el resto por los auriculares), o «La salida predeterminada» para volver a la normal. Es lo mismo que el Mezclador de volumen de Windows y Windows lo recuerda para la próxima vez. La aplicación tiene que estar sonando para poder cambiarla. Algunos programas eligen su propia salida (NVDA, juegos, programas de música profesional) y no hacen caso de esto.
 - **Solo esta aplicación**: silencia las demás; repítalo para que vuelvan a sonar todas.
+- **Volumen máximo de la aplicación**: escriba un número de 0 a 100. Si la aplicación (o una página web, o un anuncio) sube su volumen por encima, Centro de Mando se lo baja en un par de segundos. La columna Estado lo muestra («máximo 40 %»). Escriba 100 para quitarlo.
+- **Ocultar esta aplicación de la lista**: deja de verse en Aplicaciones con sonido (por ejemplo, el propio lector de pantalla o programas que nunca toca). **Ver las aplicaciones ocultas** las enseña de nuevo mientras no cierre el programa; para dejar de ocultarlas, bórrelas en Opciones, Audio, **Aplicaciones ocultas en el área de audio**.
+
+Y para la salida seleccionada en la lista de dispositivos:
+
+- **Activar o desactivar las mejoras de audio de la salida**: los efectos del controlador (ecualizadores, sonido envolvente virtual, mejora de graves...). Es la opción «Mejoras de audio» de Configuración de Windows. Desactivarlas a veces quita retardos o sonidos raros, y algunos lectores de pantalla suenan más limpios. Si el dispositivo no las tiene, se dice.
 
 Al conectar o desconectar un dispositivo de audio se dice «Conectado» o «Desconectado» y su nombre (Opciones, Anuncios, para desactivarlo). Se espera unos segundos a que el cambio se asiente: si un dispositivo se desconecta y se vuelve a conectar enseguida no se dice nada, y uno con varias entradas de audio con el mismo nombre avisa una sola vez. El audio de monitores y televisores (HDMI, DisplayPort) no avisa de fábrica, porque Windows lo desconecta y lo conecta cada vez que la pantalla reposa o despierta; actívelo en Opciones, Anuncios, **Avisar también del audio de monitores y televisores**.
 
@@ -285,6 +297,8 @@ En Opciones, pestaña **Audio**:
 - **Bloquear el volumen del micrófono** y **Volumen fijo del micrófono**: algunos programas (Teams, Chrome, Zoom, ciertos controladores) suben o bajan el micrófono por su cuenta. Con esto marcado, Centro de Mando lo devuelve al volumen fijo en un par de segundos. Si lo cambia usted desde Centro de Mando (deslizador o teclas globales), ese pasa a ser el volumen fijo.
 - **Silenciar el micrófono al arrancar**: al abrir Centro de Mando (también al iniciar Windows) el micrófono queda silenciado; Control+Alt+Windows+M lo activa.
 - **Silenciar las aplicaciones y el micrófono al bloquear el equipo**: al bloquear con Windows+L se silencian las aplicaciones que suenan y el micrófono; al desbloquear, recuperan el sonido solo las que silenció Centro de Mando. El lector de pantalla no se silencia nunca, para que pueda seguir oyéndolo en la pantalla de bloqueo.
+- **Durante las llamadas, Windows**: qué hace Windows con los demás sonidos cuando detecta una llamada de Teams, WhatsApp, Discord o similares: silenciarlos, bajarlos un 80 % (lo de fábrica), bajarlos un 50 % o no hacer nada. Es la pestaña Comunicaciones del Panel de sonido. Con lector de pantalla suele convenir «No hace nada», para que la voz no baje de golpe al empezar una llamada. Se aplica a partir de la siguiente llamada.
+- **Aplicaciones ocultas en el área de audio**: las que no aparecen en la lista, separadas por comas.
 
 Audio mono (oír por los dos oídos lo que va por un solo canal) es una opción de Windows que Centro de Mando no puede cambiar al momento: en el lanzador escriba «mono» o vaya a Configuración, Accesibilidad, Audio.
 
@@ -357,10 +371,10 @@ Herramientas, Opciones (Control+coma), con pestañas:
 - **Cambio de escritorio**: cíclico, foco a la última ventana y animación.
 - **Anuncios**: cuándo se dice el escritorio al cambiar (automático, solo los propios, todos o nunca), qué se dice y con cuánto retraso, y los avisos de dispositivos de audio.
 - **Listas**: qué se dice al moverse por las columnas.
-- **Portapapeles**: guardar o no, máximo de elementos, caducidad en días, formatos que se guardan, tamaño de imagen, privacidad, programas excluidos, restaurar tras pegar, forma de pegar y anunciar cada copia.
+- **Portapapeles**: guardar o no, máximo de elementos, caducidad en días, formatos que se guardan, tamaño de imagen, privacidad, programas excluidos, restaurar tras pegar, forma de pegar, anunciar cada copia y cifrar el historial.
 - **Emoticonos**: forma de insertar, tono de piel, mostrar el carácter y cuántos recientes se recuerdan.
 - **Notificaciones**: guardar o no, cada cuánto se consulta, anunciar las nuevas (todas o solo las de algunas aplicaciones), marcar como leídas, aplicaciones ignoradas, máximo y días.
-- **Audio**: bloquear el volumen del micrófono, silenciarlo al arrancar y silenciar al bloquear el equipo.
+- **Audio**: bloquear el volumen del micrófono, silenciarlo al arrancar, silenciar al bloquear el equipo, qué hace Windows durante las llamadas y aplicaciones ocultas.
 - **Copias de seguridad**: copia automática diaria, cuántas se conservan y si incluyen el historial del portapapeles.
 - **No molestar**: activarlo ahora, horario diario y aplicaciones que se anuncian igualmente.
 - **Ventanas**: seguir a la ventana al moverla y aplicar las reglas al iniciar.

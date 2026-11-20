@@ -121,6 +121,11 @@ class AreaPortapapeles(wx.Panel):
 
 	# ── Datos ───────────────────────────────────────────────────────────────
 
+	def mostrar_solo_favoritos(self) -> None:
+		"""Pone el filtro «Favoritos» (ventana rápida de favoritos)."""
+		claves = [clave for clave, _nombre in FILTROS]
+		self.filtro.SetSelection(claves.index(FILTRO_FAVORITOS))
+
 	def refrescar(self) -> None:
 		"""Relee el historial con la búsqueda y el filtro actuales."""
 		if not self:

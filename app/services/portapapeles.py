@@ -50,6 +50,37 @@ CREATE TABLE IF NOT EXISTS elementos (
 CREATE INDEX IF NOT EXISTS indice_usado ON elementos (usado DESC);
 """
 
+# Texto que se ve en lugar de un elemento cifrado por otra cuenta de Windows.
+NO_DESCIFRABLE = "(cifrado por otro usuario de Windows o en otro equipo: no se puede leer)"
+
+
+def _cifrar_texto(texto: str) -> bytes:
+	from app.core import dpapi
+
+	return dpapi.cifrar(texto.encode("utf-8", "surrogatepass"))
+
+
+def _descifrar_texto(valor) -> str:
+	from app.core import dpapi
+
+	if not valor:
+		return ""
+	if isinstance(valor, str):  # guardado antes de cifrar (no debería pasar)
+		return valor
+	return dpapi.descifrar(valor).decode("utf-8", "surrogatepass")
+
+
+def _cifrar_binario(datos) -> bytes | None:
+	from app.core import dpapi
+
+	return dpapi.cifrar(bytes(datos)) if datos else None
+
+
+def _descifrar_binario(datos) -> bytes:
+	from app.core import dpapi
+
+	return dpapi.descifrar(bytes(datos)) if datos else b""
+
 
 def _tipo_titulo(texto: str) -> str:
 	"""Mayúscula al principio de cada palabra, sin tocar el resto (``str.title`` estropea «l'agua»)."""
@@ -146,12 +177,22 @@ def describir_tiempo(instante: float, ahora: float | None = None) -> str:
 class HistorialPortapapeles:
 	"""Acceso a la base de datos del historial. Seguro entre hilos."""
 
-	COLUMNAS_LISTA = "id, tipo, texto, nombre, favorito, origen, creado, usado, veces, ancho, alto, archivos"
+	COLUMNAS_LISTA = "id, tipo, texto, nombre, favorito, origen, creado, usado, veces, ancho, alto, archivos, cifrado"
 
 	def __init__(self, ruta: Path | None = None) -> None:
 		self.ruta = ruta or (paths.ruta_base_datos() / "portapapeles.db")
 		self._candado = threading.RLock()
 		self._conexion = self._abrir()
+		# Guardar lo nuevo cifrado con DPAPI (opción «Cifrar el historial»).
+		self.cifrar = False
+
+	@staticmethod
+	def _migrar(conexion: sqlite3.Connection) -> None:
+		"""Añade las columnas de versiones nuevas a una base antigua."""
+		columnas = {fila[1] for fila in conexion.execute("PRAGMA table_info(elementos)")}
+		if "cifrado" not in columnas:
+			conexion.execute("ALTER TABLE elementos ADD COLUMN cifrado INTEGER NOT NULL DEFAULT 0")
+			conexion.commit()
 
 	def _abrir(self) -> sqlite3.Connection:
 		conexion = None
@@ -161,6 +202,7 @@ class HistorialPortapapeles:
 			conexion.execute("PRAGMA synchronous=NORMAL")
 			conexion.executescript(ESQUEMA)
 			conexion.execute("PRAGMA integrity_check").fetchone()
+			self._migrar(conexion)
 			return conexion
 		except sqlite3.DatabaseError:
 			# Base dañada: se aparta para estudiarla y se empieza de cero.
@@ -175,6 +217,7 @@ class HistorialPortapapeles:
 				log.exception("No se pudo apartar %s", self.ruta)
 			conexion = sqlite3.connect(self.ruta, check_same_thread=False, timeout=5)
 			conexion.executescript(ESQUEMA)
+			self._migrar(conexion)
 			return conexion
 
 	def cerrar(self) -> None:
@@ -186,14 +229,30 @@ class HistorialPortapapeles:
 
 	@staticmethod
 	def _elemento(fila: tuple) -> Elemento:
-		id_, tipo, texto, nombre, favorito, origen, creado, usado, veces, ancho, alto, archivos = fila[:12]
+		id_, tipo, texto, nombre, favorito, origen, creado, usado, veces, ancho, alto, archivos, cifrado = fila[:13]
+		html, imagen = (fila[13] or b"", fila[14] or b"") if len(fila) > 13 else (b"", b"")
+		if cifrado:
+			from app.core import dpapi
+
+			try:
+				texto = _descifrar_texto(texto)
+				archivos = _descifrar_texto(archivos)
+				html, imagen = _descifrar_binario(html), _descifrar_binario(imagen)
+			except dpapi.ErrorDpapi:
+				texto, archivos, html, imagen = NO_DESCIFRABLE, "", b"", b""
 		elemento = Elemento(
 			id_, tipo, texto, nombre, bool(favorito), origen, creado, usado, veces, ancho, alto, json.loads(archivos) if archivos else []
 		)
-		if len(fila) > 12:
-			elemento.html = fila[12] or b""
-			elemento.imagen = fila[13] or b""
+		if len(fila) > 13:
+			elemento.html = html
+			elemento.imagen = imagen
 		return elemento
+
+	def _valores_guardados(self, texto: str, html, archivos: str, imagen, cifrar: bool) -> tuple:
+		"""(texto, html, archivos, imagen, cifrado) tal y como van a la base."""
+		if not cifrar:
+			return texto, html or None, archivos, imagen or None, 0
+		return _cifrar_texto(texto), _cifrar_binario(html), _cifrar_texto(archivos) if archivos else "", _cifrar_binario(imagen), 1
 
 	def agregar(self, contenido: Contenido, maximo: int = 0) -> Elemento:
 		"""Guarda el contenido (o sube arriba el que ya estaba) y aplica el límite."""
@@ -209,22 +268,17 @@ class HistorialPortapapeles:
 				)
 				identificador = existe[0]
 			else:
+				texto, html, archivos, imagen, cifrado = self._valores_guardados(
+					contenido.texto,
+					contenido.html,
+					json.dumps(contenido.archivos, ensure_ascii=False) if contenido.archivos else "",
+					contenido.imagen,
+					self.cifrar,
+				)
 				cursor = self._conexion.execute(
-					"INSERT INTO elementos (huella, tipo, texto, html, archivos, imagen, ancho, alto, origen, creado, usado)"
-					" VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-					(
-						huella,
-						contenido.tipo,
-						contenido.texto,
-						contenido.html or None,
-						json.dumps(contenido.archivos, ensure_ascii=False) if contenido.archivos else "",
-						contenido.imagen or None,
-						ancho,
-						alto,
-						contenido.origen,
-						ahora,
-						ahora,
-					),
+					"INSERT INTO elementos (huella, tipo, texto, html, archivos, imagen, ancho, alto, origen, creado, usado, cifrado)"
+					" VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					(huella, contenido.tipo, texto, html, archivos, imagen, ancho, alto, contenido.origen, ahora, ahora, cifrado),
 				)
 				identificador = cursor.lastrowid
 			if maximo > 0:
@@ -261,15 +315,84 @@ class HistorialPortapapeles:
 		elif filtro in (TIPO_TEXTO, TIPO_IMAGEN, TIPO_ARCHIVOS):
 			condiciones.append("tipo = ?")
 			valores.append(filtro)
-		for palabra in buscar.split():
+		palabras = buscar.split()
+		base, valores_base = list(condiciones), list(valores)
+		for palabra in palabras:
 			condiciones.append("(texto LIKE ? ESCAPE '\\' OR nombre LIKE ? ESCAPE '\\' OR archivos LIKE ? ESCAPE '\\')")
 			patron = "%" + palabra.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
 			valores += [patron, patron, patron]
+		if palabras:
+			condiciones.append("cifrado = 0")
 		donde = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
 		consulta = f"SELECT {self.COLUMNAS_LISTA} FROM elementos{donde} ORDER BY usado DESC LIMIT ?"
 		with self._candado:
 			filas = self._conexion.execute(consulta, (*valores, limite)).fetchall()
-		return [self._elemento(f) for f in filas]
+			cifradas = []
+			if palabras:
+				# Lo cifrado no se puede buscar con SQL: se descifra y se busca aquí.
+				donde_cifradas = " WHERE " + " AND ".join([*base, "cifrado = 1"])
+				cifradas = self._conexion.execute(
+					f"SELECT {self.COLUMNAS_LISTA} FROM elementos{donde_cifradas} ORDER BY usado DESC", valores_base
+				).fetchall()
+		elementos = [self._elemento(f) for f in filas]
+		if cifradas:
+			buscadas = [p.casefold() for p in palabras]
+			for fila in cifradas:
+				elemento = self._elemento(fila)
+				pajar = " ".join([elemento.texto, elemento.nombre, *elemento.archivos]).casefold()
+				if all(p in pajar for p in buscadas):
+					elementos.append(elemento)
+			elementos.sort(key=lambda e: e.usado, reverse=True)
+		if palabras:
+			# Al buscar, los favoritos primero (sin perder el orden por uso dentro de cada grupo).
+			elementos.sort(key=lambda e: not e.favorito)
+		return elementos[:limite]
+
+	def contar_cifrados(self, cifrados: bool = True) -> int:
+		with self._candado:
+			return self._conexion.execute("SELECT COUNT(*) FROM elementos WHERE cifrado = ?", (int(cifrados),)).fetchone()[0]
+
+	def cambiar_cifrado(self, cifrar: bool, al_avanzar=None) -> int:
+		"""Cifra (o descifra) todo lo guardado; devuelve cuántos elementos cambió.
+
+		Va por tandas para no bloquear el historial mucho rato. Los que no se
+		pueden descifrar (de otra cuenta de Windows) se dejan como están.
+		"""
+		from app.core import dpapi
+
+		self.cifrar = cifrar
+		cambiados = 0
+		ultimo = 0
+		while True:
+			with self._candado:
+				filas = self._conexion.execute(
+					"SELECT id, texto, html, archivos, imagen FROM elementos WHERE cifrado = ? AND id > ? ORDER BY id LIMIT 100",
+					(int(not cifrar), ultimo),
+				).fetchall()
+				if not filas:
+					break
+				with self._conexion:
+					for id_, texto, html, archivos, imagen in filas:
+						ultimo = id_
+						try:
+							if not cifrar:
+								texto, archivos = _descifrar_texto(texto), _descifrar_texto(archivos)
+								html, imagen = _descifrar_binario(html), _descifrar_binario(imagen)
+							nuevos = self._valores_guardados(texto, html, archivos, imagen, cifrar)
+						except dpapi.ErrorDpapi:
+							continue
+						self._conexion.execute(
+							"UPDATE elementos SET texto = ?, html = ?, archivos = ?, imagen = ?, cifrado = ? WHERE id = ?", (*nuevos, id_)
+						)
+						cambiados += 1
+			if al_avanzar is not None:
+				al_avanzar(cambiados)
+		if cambiados:
+			with self._candado:
+				# Que no queden restos del texto sin cifrar en las páginas libres del archivo.
+				self._conexion.execute("VACUUM")
+		log.info("Historial del portapapeles %s: %d elementos.", "cifrado" if cifrar else "descifrado", cambiados)
+		return cambiados
 
 	def obtener(self, identificador: int, completo: bool = True) -> Elemento | None:
 		columnas = self.COLUMNAS_LISTA + (", html, imagen" if completo else "")
@@ -324,6 +447,7 @@ class PreferenciasPortapapeles:
 	guardar_imagenes: bool = True
 	maximo_imagen_mb: int = 20
 	ignorar_privados: bool = True
+	cifrar: bool = False
 	programas_excluidos: tuple[str, ...] = ()
 	restaurar_tras_pegar: bool = True
 	retraso_restaurar_ms: int = 500
@@ -398,6 +522,7 @@ class ServicioPortapapeles:
 		if contenido is None or contenido.vacio:
 			return
 		contenido.origen = origen
+		self.historial.cifrar = preferencias.cifrar
 		elemento = self.historial.agregar(contenido, preferencias.maximo)
 		self.historial.caducar(preferencias.dias)
 		if elemento is not None and self.al_agregar is not None:

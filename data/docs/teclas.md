@@ -132,7 +132,7 @@ Las teclas globales funcionan desde cualquier programa y se cambian en Herramien
 - Lista de aplicaciones (Alt+S): Más y Menos o Control+flechas arriba y abajo cambian el volumen; Espacio silencia.
 - Volumen de la aplicación seleccionada (Alt+P) y Silenciar la aplicación (Alt+R).
 - Lista de micrófonos (Alt+F): Intro lo pone como predeterminado.
-- Volumen del micrófono (Alt+M), Silenciar el micrófono (Alt+E), Escuchar este dispositivo (Alt+T) y Oír el micrófono por (Alt+O).
+- Volumen del micrófono (Alt+M), Silenciar el micrófono (Alt+E), Escuchar este dispositivo (Alt+T), Oír el micrófono por (Alt+O) y Amplificación del micrófono (Alt+L).
 - Diálogo de dispositivos preferidos: activar (Alt+O), lista (Alt+D; Espacio marca), Subir (Alt+U) y Bajar (Alt+B), o Alt+Mayúsculas+flechas arriba y abajo en la lista.
 
 ## Sistema

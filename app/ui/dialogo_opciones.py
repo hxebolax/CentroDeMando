@@ -33,6 +33,8 @@ def _(texto: str) -> str:
 
 
 CLAVE_INICIO_WINDOWS = "__inicio_windows__"
+# Se lee y se guarda en el registro de Windows, no en config.json.
+CLAVE_ATENUACION = "__atenuacion_llamadas__"
 
 
 @dataclass(frozen=True)
@@ -253,6 +255,14 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				valores=("control_v", "mayus_insert"),
 			),
 			Opcion("portapapeles.anunciar_copias", "A&nunciar cada copia por voz", "Dice el principio de lo que se acaba de copiar."),
+			Opcion(
+				"portapapeles.cifrar",
+				"Cifrar el hi&storial guardado (solo lo puede leer su usuario de Windows)",
+				"Guarda lo copiado cifrado con la protección de datos de Windows: si alguien se lleva el archivo del historial a "
+				"otro equipo u otro usuario, no puede leerlo. Al marcarlo se cifra también lo que ya había (y al desmarcarlo se "
+				"descifra), en segundo plano. La búsqueda sigue funcionando. Ojo: una copia de seguridad con el historial cifrado "
+				"solo se puede leer con este mismo usuario de Windows.",
+			),
 		],
 	),
 	(
@@ -380,6 +390,28 @@ PAGINAS: list[tuple[str, list[Opcion]]] = [
 				"Silenciar las aplicaciones y el micrófono al b&loquear el equipo",
 				"Al bloquear el equipo (Windows+L) se silencian las aplicaciones con sonido y el micrófono; al volver, recuperan "
 				"el sonido. El lector de pantalla no se silencia nunca.",
+			),
+			Opcion(
+				CLAVE_ATENUACION,
+				"&Durante las llamadas, Windows:",
+				"Lo que hace Windows con los demás sonidos cuando detecta una llamada (Teams, WhatsApp, Discord...). "
+				"Es la pestaña Comunicaciones del Panel de sonido. Con lector de pantalla, «No hace nada» evita que la voz baje "
+				"de golpe al empezar una llamada. Se aplica a partir de la siguiente llamada.",
+				"elegir",
+				opciones=(
+					"Silencia todos los demás sonidos",
+					"Baja los demás sonidos un 80 % (de fábrica)",
+					"Baja los demás sonidos un 50 %",
+					"No hace nada",
+				),
+				valores=(0, 1, 2, 3),
+			),
+			Opcion(
+				"audio.apps_ocultas",
+				"Aplicaciones &ocultas en el área de audio, separadas por comas:",
+				"Programas que no aparecen en la lista Aplicaciones con sonido (por ejemplo, «nvda, sapisvr»). "
+				"Se ocultan también desde el menú Acción del área; bórrelos de aquí para volver a verlos.",
+				"texto",
 			),
 			Opcion(
 				"",
@@ -558,6 +590,10 @@ class DialogoOpciones(wx.Dialog):
 	def _valor(self, clave: str):
 		if clave == CLAVE_INICIO_WINDOWS:
 			return sistema.inicio_automatico_activo(NOMBRE_APLICACION)
+		if clave == CLAVE_ATENUACION:
+			from app.services import audio
+
+			return audio.leer_atenuacion()
 		return self._config.obtener(clave)
 
 	def _crear_control(self, pagina: wx.Window, opcion: Opcion, sizer: wx.Sizer) -> wx.Window:
@@ -608,6 +644,15 @@ class DialogoOpciones(wx.Dialog):
 								_("Opciones"),
 								wx.ICON_WARNING,
 							)
+					continue
+				if opcion.clave == CLAVE_ATENUACION:
+					from app.services import audio
+
+					if valor != audio.leer_atenuacion():
+						try:
+							audio.poner_atenuacion(valor)
+						except audio.ErrorAudio as error:
+							mostrar_mensaje(self, str(error), _("Opciones"), wx.ICON_WARNING)
 					continue
 				self._config.establecer(opcion.clave, valor)
 		self._config.guardar()

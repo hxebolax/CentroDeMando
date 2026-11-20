@@ -84,11 +84,14 @@ class VentanaRapida(wx.Dialog):
 class PortapapelesRapido(VentanaRapida):
 	"""Historial del portapapeles: Intro pega en la ventana de la que se vino."""
 
-	def __init__(self, controlador: Controlador, destino: int) -> None:
-		super().__init__(_("Portapapeles"), controlador, destino)
+	def __init__(self, controlador: Controlador, destino: int, solo_favoritos: bool = False) -> None:
+		self._solo_favoritos = solo_favoritos
+		super().__init__(_("Favoritos del portapapeles") if solo_favoritos else _("Portapapeles"), controlador, destino)
 
 	def _crear_area(self) -> AreaPortapapeles:
 		area = AreaPortapapeles(self, self.controlador, self._pegar)
+		if self._solo_favoritos:
+			area.mostrar_solo_favoritos()
 		area.refrescar()
 		return area
 

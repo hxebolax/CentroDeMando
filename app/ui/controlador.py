@@ -183,6 +183,7 @@ class Controlador:
 		wx.CallAfter(self._vigilar_microfono)
 		wx.CallLater(1500, self.aplicar_preferencias_audio, False)
 		wx.CallLater(30_000, self._copia_automatica)
+		wx.CallLater(3000, self.aplicar_cifrado_portapapeles)
 		if self.config.obtener("audio.silenciar_micro_al_iniciar", False):
 			from app.services import audio
 
@@ -247,6 +248,7 @@ class Controlador:
 			guardar_imagenes=bool(obtener("portapapeles.guardar_imagenes", True)),
 			maximo_imagen_mb=int(obtener("portapapeles.maximo_imagen_mb", 20)),
 			ignorar_privados=bool(obtener("portapapeles.ignorar_privados", True)),
+			cifrar=bool(obtener("portapapeles.cifrar", False)),
 			programas_excluidos=tuple(p.strip() for p in excluidos.replace(";", ",").split(",") if p.strip()),
 			restaurar_tras_pegar=bool(obtener("portapapeles.restaurar_tras_pegar", True)),
 			retraso_restaurar_ms=int(obtener("portapapeles.retraso_restaurar_ms", 500)),
@@ -448,7 +450,7 @@ class Controlador:
 			wx.CallAfter(self.anunciar_escritorio)
 		elif accion == "anunciar_ventanas":
 			wx.CallAfter(self.anunciar_ventanas)
-		elif accion in ("portapapeles_rapido", "emoticonos_rapido"):
+		elif accion in ("portapapeles_rapido", "emoticonos_rapido", "portapapeles_favoritos"):
 			# La ventana de destino se mira AHORA, antes de que se abra la nuestra.
 			destino = w32.ventana_activa()
 			if destino and w32.pid(destino) == os.getpid():
@@ -895,6 +897,44 @@ class Controlador:
 		]
 		self.hablar(". ".join(partes), True)
 
+	def _al_cambio_escucha(self, identificador: str) -> None:
+		"""Alguien cambió «Escuchar este dispositivo» (Panel de sonido u otro programa): se dice."""
+		from app.services import audio
+
+		if audio.cambio_de_escucha_propio(identificador):
+			return
+		try:
+			activa, _destino = audio.leer_escucha(identificador)
+			nombre = next((d.nombre for d in audio.dispositivos_entrada() if d.id == identificador), _("el micrófono"))
+		except Exception:  # noqa: BLE001
+			log.debug("No se pudo leer el cambio de escucha", exc_info=True)
+			return
+		conocidas = self.__dict__.setdefault("_escuchas_conocidas", {})
+		if conocidas.get(identificador) == activa:
+			return
+		conocidas[identificador] = activa
+		self.hablar((_("Se oye {m}") if activa else _("Ya no se oye {m}")).format(m=nombre))
+		if self.ventana and self.ventana.area_actual() is self.ventana.area_audio:
+			self.ventana.area_audio.refrescar()
+
+	def limites_volumen(self) -> dict[str, int]:
+		from app.services import audio
+
+		return audio.leer_limites(self.config.obtener("audio.volumen_maximo", {}))
+
+	def poner_limite_volumen(self, programa: str, maximo: int | None) -> None:
+		"""``None`` o 100 quita el límite."""
+		from app.services import audio
+
+		limites = self.limites_volumen()
+		clave = audio.nombre_programa(programa)
+		if maximo is None or maximo >= 100:
+			limites.pop(clave, None)
+		else:
+			limites[clave] = max(0, int(maximo))
+		self.config.establecer("audio.volumen_maximo", limites)
+		self.config.guardar()
+
 	def aplicar_preferencias_audio(self, anunciar: bool = True) -> None:
 		"""Pone como predeterminados la salida y el micrófono preferidos que estén conectados."""
 		from app.services import audio
@@ -962,6 +1002,13 @@ class Controlador:
 			self._vigilar_sesion()
 		except Exception:  # noqa: BLE001
 			log.debug("No se pudo vigilar la sesión", exc_info=True)
+		limites = self.limites_volumen()
+		if limites:
+			try:
+				for nombre in audio.aplicar_limites(limites):
+					log.info("Volumen de %s bajado a su máximo", nombre)
+			except Exception:  # noqa: BLE001
+				log.debug("No se pudieron aplicar los volúmenes máximos", exc_info=True)
 		if self.config.obtener("audio.bloquear_micro", False):
 			objetivo = min(max(int(self.config.obtener("audio.volumen_micro_bloqueado", 80)), 0), 100)
 			try:
@@ -972,6 +1019,35 @@ class Controlador:
 			except Exception:  # noqa: BLE001 - sin micrófono o desconectado
 				log.debug("No se pudo vigilar el volumen del micrófono", exc_info=True)
 		self._temporizador_micro = wx.CallLater(2000, self._vigilar_microfono)
+
+	def aplicar_cifrado_portapapeles(self) -> None:
+		"""Si la opción no coincide con lo guardado, cifra o descifra el historial en segundo plano."""
+		cifrar = bool(self.config.obtener("portapapeles.cifrar", False))
+		historial = self.portapapeles.historial
+		try:
+			pendientes = historial.contar_cifrados(not cifrar)
+		except Exception:  # noqa: BLE001
+			log.debug("No se pudo contar el historial", exc_info=True)
+			return
+		historial.cifrar = cifrar
+		if not pendientes or getattr(self, "_cifrando", False):
+			return
+		self._cifrando = True
+
+		def trabajo() -> None:
+			try:
+				cambiados = historial.cambiar_cifrado(cifrar)
+				texto = (_("Historial del portapapeles cifrado: {n} elementos") if cifrar else _("Historial del portapapeles descifrado: {n} elementos")).format(
+					n=cambiados
+				)
+				wx.CallAfter(self.hablar, texto)
+			except Exception:  # noqa: BLE001
+				log.exception("No se pudo cambiar el cifrado del historial")
+				wx.CallAfter(self.avisar, _("No se pudo cifrar o descifrar el historial. Detalles en el registro."))
+			finally:
+				self._cifrando = False
+
+		threading.Thread(target=trabajo, name="cifrado-portapapeles", daemon=True).start()
 
 	def _copia_automatica(self) -> None:
 		"""Copia de seguridad diaria, en un hilo para no frenar la interfaz."""
@@ -1028,6 +1104,7 @@ class Controlador:
 				al_cambiar,
 				con_pantallas=lambda: bool(self.config.obtener("anuncios.dispositivos_pantallas", False)),
 				al_estabilizar=lambda: wx.CallAfter(self.aplicar_preferencias_audio),
+				al_cambio_escucha=lambda identificador: wx.CallLater(400, self._al_cambio_escucha, identificador),
 			)
 			self._vigilante_audio.iniciar()
 		except Exception:  # noqa: BLE001 - sin avisos de dispositivos, el resto sigue

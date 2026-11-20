@@ -1,5 +1,21 @@
 # Novedades de Centro de Mando
 
+## 1.4.0
+
+Audio:
+
+- **Amplificación del micrófono** (Alt+L en el área de audio), en los micrófonos que la tienen.
+- **Volumen máximo por aplicación**: si una aplicación o una web sube su volumen por encima, se le baja.
+- **Ocultar aplicaciones** de la lista de aplicaciones con sonido, y verlas de nuevo cuando quiera.
+- **Mejoras de audio** de cada salida: activarlas o desactivarlas desde el menú Acción.
+- **Qué hace Windows durante las llamadas** con los demás sonidos: silenciarlos, bajarlos o nada (Opciones, Audio). Con lector de pantalla, «No hace nada» evita que la voz baje de golpe.
+- Si cambia **Escuchar este dispositivo** desde el Panel de sonido de Windows, Centro de Mando lo dice.
+
+Portapapeles:
+
+- **Cifrar el historial** con la protección de datos de Windows: solo su usuario puede leerlo. Se cifra también lo ya guardado y la búsqueda sigue funcionando.
+- Al buscar, **los favoritos salen primero**, y una tecla global nueva abre **solo los favoritos**.
+
 ## 1.3.0
 
 - **Cambio automático al dispositivo preferido**: ordene sus salidas y micrófonos favoritos (área de audio, menú Acción) y, al conectar los auriculares, el sonido pasa a ellos; al apagarlos, vuelve al siguiente de la lista. Se recuerdan por nombre, aunque cambien de puerto.

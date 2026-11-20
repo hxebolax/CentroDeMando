@@ -10,6 +10,7 @@ Controles (en orden de tabulación, cada uno con su etiqueta delante):
 - «Volumen de la aplicación» (Alt+P) y «Silenciar la aplicación» (Alt+R): los
   de la aplicación seleccionada en la lista, igual que los generales.
 - «Micrófonos» (Alt+F): Intro lo pone como predeterminado.
+- «Amplificación del micrófono» (Alt+L): solo en micrófonos que la tienen.
 - «Volumen del micrófono» (Alt+M), «Silenciar el micrófono» (Alt+E),
   «Escuchar este dispositivo» (Alt+T) y «Oír el micrófono por» (Alt+O): los del
   micrófono seleccionado. Escuchar lo reproduce por la salida elegida, como la
@@ -131,7 +132,19 @@ class AreaAudio(wx.Panel):
 		fila.Add(etiqueta_por, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
 		fila.Add(self.escuchar_por, 1)
 		sizer.Add(fila, 0, wx.EXPAND | wx.ALL, 8)
+		etiqueta = wx.StaticText(self, label=_("Amp&lificación del micrófono:"))
+		self.amplificacion = wx.Choice(self)
+		self.amplificacion.SetHelpText(
+			_("Amplificación del micrófono seleccionado en decibelios, como en Niveles del Panel de sonido. "
+			"Muchos micrófonos USB y Bluetooth no la tienen: entonces está desactivada.")
+		)
+		fila = wx.BoxSizer(wx.HORIZONTAL)
+		fila.Add(etiqueta, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+		fila.Add(self.amplificacion, 0)
+		sizer.Add(fila, 0, wx.ALL, 8)
 		self.SetSizer(sizer)
+		self._amplificaciones: dict[str, list] = {}
+		self._ver_ocultas = False
 
 		self.dispositivos.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda _e: self.predeterminar())
 		self.entradas.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda _e: self.predeterminar_micro())
@@ -147,6 +160,7 @@ class AreaAudio(wx.Panel):
 		self.silencio_micro.Bind(wx.EVT_CHECKBOX, self._al_silencio_micro)
 		self.escuchar.Bind(wx.EVT_CHECKBOX, self._al_escuchar)
 		self.escuchar_por.Bind(wx.EVT_CHOICE, self._al_escuchar)
+		self.amplificacion.Bind(wx.EVT_CHOICE, self._al_amplificacion)
 		self._temporizador = wx.Timer(self)
 		self.Bind(wx.EVT_TIMER, lambda _e: self.refrescar() if self.IsShownOnScreen() else None, self._temporizador)
 		self.Bind(wx.EVT_WINDOW_DESTROY, self._al_destruir)
@@ -170,7 +184,7 @@ class AreaAudio(wx.Panel):
 			return
 		try:
 			self._dispositivos = audio.dispositivos_salida()
-			self._sesiones = audio.sesiones()
+			self._sesiones = self._filtrar_ocultas(audio.sesiones())
 			volumen, silencio = audio.volumen_general()
 		except audio.ErrorAudio as error:
 			self.controlador.hablar(str(error), True)
@@ -197,12 +211,10 @@ class AreaAudio(wx.Panel):
 			self.balance.SetHelpText(_("Esta salida no tiene canal izquierdo y derecho: su balance no se puede cambiar."))
 		self._poner_casilla(self.silencio_general, silencio)
 		self.volumen.SetHelpText(_("Volumen general: {v} %{s}.").format(v=volumen, s=_(", silenciado") if silencio else ""))
+		limites = self.controlador.limites_volumen()
 		actualizar_lista(
 			self.sesiones,
-			[
-				(s.clave, (s.nombre, f"{s.volumen} %", _("silenciada") if s.silenciada else "", nombres.get(s.dispositivo, "")))
-				for s in self._sesiones
-			],
+			[(s.clave, (s.nombre, f"{s.volumen} %", self._estado_sesion(s, limites), nombres.get(s.dispositivo, ""))) for s in self._sesiones],
 			self._claves_sesiones,
 		)
 		self._sincronizar_app()
@@ -271,6 +283,132 @@ class AreaAudio(wx.Panel):
 			if self.escuchar_por.GetSelection() != posicion:
 				self.escuchar_por.SetSelection(posicion)
 		self.volumen_micro.SetHelpText(_("Volumen de {m}, de 0 a 100.").format(m=micro.nombre))
+		self._sincronizar_amplificacion(micro)
+
+	# ── Amplificación del micrófono ─────────────────────────────────────────
+
+	def _amplificacion_de(self, micro: audio.Dispositivo):
+		"""Primer control de amplificación del micrófono (se busca una vez por micrófono)."""
+		from app.services import topologia
+
+		if micro.id not in self._amplificaciones:
+			try:
+				self._amplificaciones[micro.id] = topologia.buscar_amplificaciones(micro.id)
+			except Exception:  # noqa: BLE001
+				log.debug("No se pudo leer la topología de %s", micro.nombre, exc_info=True)
+				self._amplificaciones[micro.id] = []
+		controles = self._amplificaciones[micro.id]
+		return controles[0] if controles else None
+
+	def _sincronizar_amplificacion(self, micro: audio.Dispositivo) -> None:
+		from app.services import topologia
+
+		control = self._amplificacion_de(micro)
+		self.amplificacion.Enable(control is not None)
+		if control is None:
+			if self.amplificacion.GetItems() != [_("No tiene")]:
+				self.amplificacion.SetItems([_("No tiene")])
+				self.amplificacion.SetSelection(0)
+			return
+		try:
+			control.nivel = float(control._control.GetLevel(0))
+		except Exception:  # noqa: BLE001 - desconectado
+			return
+		valores = topologia.pasos_validos(control.minimo, control.maximo, control.paso)
+		textos = [topologia.formatear_db(v) for v in valores]
+		if self.amplificacion.GetItems() != textos:
+			self.amplificacion.SetItems(textos)
+		if wx.Window.FindFocus() is not self.amplificacion:
+			cercano = min(range(len(valores)), key=lambda i: abs(valores[i] - control.nivel))
+			if self.amplificacion.GetSelection() != cercano:
+				self.amplificacion.SetSelection(cercano)
+
+	def _al_amplificacion(self, _evento: wx.CommandEvent) -> None:
+		from app.services import topologia
+
+		micro = self._entrada()
+		control = self._amplificacion_de(micro) if micro else None
+		if control is None:
+			return
+		valores = topologia.pasos_validos(control.minimo, control.maximo, control.paso)
+		posicion = self.amplificacion.GetSelection()
+		if 0 <= posicion < len(valores):
+			nivel = self._intentar(topologia.poner_amplificacion, control, valores[posicion])
+			if nivel is not None:
+				self.controlador.hablar(_("Amplificación {d}").format(d=topologia.formatear_db(nivel)), True)
+
+	# ── Aplicaciones ocultas y volumen máximo ───────────────────────────────
+
+	def _filtrar_ocultas(self, sesiones: list) -> list:
+		if self._ver_ocultas:
+			return sesiones
+		ocultas = audio.lista_programas(self.controlador.config.obtener("audio.apps_ocultas", ""))
+		return [s for s in sesiones if audio.nombre_programa(s.nombre) not in ocultas]
+
+	@staticmethod
+	def _estado_sesion(sesion, limites: dict[str, int]) -> str:
+		partes = []
+		if sesion.silenciada:
+			partes.append(_("silenciada"))
+		maximo = limites.get(audio.nombre_programa(sesion.nombre))
+		if maximo is not None:
+			partes.append(_("máximo {m} %").format(m=maximo))
+		return ", ".join(partes)
+
+	def _limitar(self, sesion, valor: int) -> int:
+		"""Un valor pedido para la aplicación, recortado a su volumen máximo si lo tiene."""
+		maximo = self.controlador.limites_volumen().get(audio.nombre_programa(sesion.nombre))
+		return min(valor, maximo) if maximo is not None else valor
+
+	def ocultar_aplicacion(self) -> None:
+		sesion = self._sesion()
+		if sesion is None or not sesion.pid:
+			return
+		config = self.controlador.config
+		ocultas = audio.lista_programas(config.obtener("audio.apps_ocultas", ""))
+		ocultas.add(audio.nombre_programa(sesion.nombre))
+		config.establecer("audio.apps_ocultas", ", ".join(sorted(ocultas)))
+		config.guardar()
+		self.controlador.hablar(
+			_("{a} oculta. Para volver a verla: Ver las aplicaciones ocultas, o en Opciones, Audio.").format(a=sesion.nombre), True
+		)
+		self.refrescar()
+
+	def alternar_ocultas(self) -> None:
+		self._ver_ocultas = not self._ver_ocultas
+		self.controlador.hablar(_("Se ven todas las aplicaciones") if self._ver_ocultas else _("Las aplicaciones ocultas no se ven"), True)
+		self.refrescar()
+
+	def volumen_maximo(self) -> None:
+		from app.ui.accesibilidad.dialogos import pedir_texto
+
+		sesion = self._sesion()
+		if sesion is None or not sesion.pid:
+			return
+		actual = self.controlador.limites_volumen().get(audio.nombre_programa(sesion.nombre), 100)
+		texto = pedir_texto(
+			self,
+			_("Volumen máximo de {a}, de 0 a 100 (100 = sin límite). Si la aplicación lo supera, Centro de Mando se lo baja:").format(
+				a=sesion.nombre
+			),
+			_("Volumen máximo"),
+			str(actual),
+		)
+		if texto is None:
+			return
+		try:
+			maximo = int(texto.strip().rstrip("%").strip())
+		except ValueError:
+			self.controlador.avisar(_("Escriba un número de 0 a 100."))
+			return
+		maximo = min(max(maximo, 0), 100)
+		self.controlador.poner_limite_volumen(sesion.nombre, maximo)
+		if maximo >= 100:
+			self.controlador.hablar(_("{a} sin volumen máximo").format(a=sesion.nombre), True)
+		else:
+			self._intentar(audio.aplicar_limites, self.controlador.limites_volumen())
+			self.controlador.hablar(_("{a}: máximo {m} %").format(a=sesion.nombre, m=maximo), True)
+		self.refrescar()
 
 	def _refrescar_pronto(self) -> None:
 		"""Relee las listas un momento después (tras mover un deslizador, sin hacerlo en cada paso)."""
@@ -320,6 +458,21 @@ class AreaAudio(wx.Panel):
 
 	def _al_mover_balance(self, _evento: wx.CommandEvent) -> None:
 		self._intentar(audio.poner_balance_general, self.balance.GetValue())
+
+	def alternar_mejoras(self) -> None:
+		"""Mejoras de audio (efectos del controlador) de la salida seleccionada."""
+		dispositivo = self._dispositivo()
+		if dispositivo is None:
+			return
+		actuales = audio.leer_mejoras(dispositivo.id)
+		if actuales is None:
+			self.controlador.hablar(_("{d} no tiene mejoras de audio.").format(d=dispositivo.nombre), True)
+			return
+		if self._intentar(audio.poner_mejoras, dispositivo.id, not actuales) is None:
+			self.controlador.hablar(
+				(_("Mejoras de audio desactivadas en {d}") if actuales else _("Mejoras de audio activadas en {d}")).format(d=dispositivo.nombre),
+				True,
+			)
 
 	def comunicaciones_salida(self) -> None:
 		dispositivo = self._dispositivo()
@@ -408,7 +561,7 @@ class AreaAudio(wx.Panel):
 
 	def _al_mover_volumen_app(self, _evento: wx.CommandEvent) -> None:
 		sesion = self._sesion()
-		if sesion is not None and self._intentar(audio.poner_volumen_sesion, sesion.clave, self.volumen_app.GetValue()) is not None:
+		if sesion is not None and self._intentar(audio.poner_volumen_sesion, sesion.clave, self._limitar(sesion, self.volumen_app.GetValue())) is not None:
 			self._refrescar_pronto()
 
 	def _al_silencio_app(self, _evento: wx.CommandEvent) -> None:
@@ -420,9 +573,9 @@ class AreaAudio(wx.Panel):
 		sesion = self._sesion()
 		if sesion is None:
 			return
-		nuevo = self._intentar(audio.cambiar_volumen_sesion, sesion.clave, paso)
+		nuevo = self._intentar(audio.poner_volumen_sesion, sesion.clave, self._limitar(sesion, sesion.volumen + paso))
 		if nuevo is not None:
-			self.controlador.hablar(f"{nuevo} %", True)
+			self.controlador.hablar(f"{nuevo} %" + (_(", el máximo") if paso > 0 and nuevo < min(sesion.volumen + paso, 100) else ""), True)
 			self.refrescar()
 
 	def silenciar_aplicacion(self) -> None:
@@ -515,22 +668,23 @@ class AreaAudio(wx.Panel):
 			(_("Si&lenciar o activar la aplicación (Espacio)"), self.silenciar_aplicacion, hay_sesion),
 			(_("Cambiar la sali&da de la aplicación..."), self.cambiar_salida, hay_sesion),
 			(_("Solo es&ta aplicación (otra vez: que suenen todas)"), self.solo_esta, hay_sesion),
+			(_("Volumen má&ximo de la aplicación..."), self.volumen_maximo, hay_sesion),
+			(_("&Ocultar esta aplicación de la lista"), self.ocultar_aplicacion, hay_sesion),
+			(_("&Ver las aplicaciones ocultas") if not self._ver_ocultas else _("No &ver las aplicaciones ocultas"), self.alternar_ocultas, True),
 			None,
-			(_("Usar como salida de c&omunicaciones (llamadas)"), self.comunicaciones_salida, hay_dispositivo),
+			(_("Usar como salida de &comunicaciones (llamadas)"), self.comunicaciones_salida, hay_dispositivo),
+			(_("Activar o desactivar las me&joras de audio de la salida"), self.alternar_mejoras, hay_dispositivo),
 			(_("Usar como micrófono pred&eterminado"), self.predeterminar_micro, hay_micro),
 			(_("Usar como micrófono de com&unicaciones"), self.comunicaciones_micro, hay_micro),
-			(_("Escuchar este dispositi&vo (oír el micrófono)"), self.alternar_escucha, hay_micro),
+			(_("Escuc&har este dispositivo (oír el micrófono)"), self.alternar_escucha, hay_micro),
 			None,
 			(_("Gua&rdar el audio actual como perfil..."), self.guardar_perfil, True),
 			(_("Apl&icar un perfil de audio..."), self.aplicar_perfil, True),
 			(_("Eliminar un per&fil de audio..."), self.eliminar_perfil, True),
 			(_("&Quién usa el micrófono o la cámara"), self.controlador.decir_privacidad, True),
 			None,
-			(_("Salidas preferidas al cone&ctar..."), lambda: self.preferencias(False), True),
-			(_("Micrófonos preferidos al conect&ar..."), lambda: self.preferencias(True), True),
-			None,
-			(_("Silenciar o activar el sonido &general"), self.controlador.silenciar_general, True),
-			(_("Silenciar o activar el &micrófono"), self.controlador.silenciar_microfono, True),
+			(_("Salid&as preferidas al conectar..."), lambda: self.preferencias(False), True),
+			(_("&Micrófonos preferidos al conectar..."), lambda: self.preferencias(True), True),
 		]
 
 	def manejar_tecla(self, evento: wx.KeyEvent) -> bool:

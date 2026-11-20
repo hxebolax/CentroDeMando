@@ -2,7 +2,7 @@
 
 Centro de mando accesible para Windows: **escritorios virtuales**, **historial del portapapeles**, **emoticonos** y **notificaciones**, todo desde la bandeja del sistema, con teclas globales configurables y pensado desde la primera línea para personas que usan lector de pantalla (NVDA, JAWS, Narrador).
 
-- Versión: 1.3.0
+- Versión: 1.4.0
 - Autor: Héctor J. Benítez Corredera
 - Licencia: [GPL-3.0](LICENSE)
 - Plataforma: Windows 10 y 11 de 64 bits
@@ -26,7 +26,7 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 - Guarda textos con formato, listas de archivos e imágenes, sin duplicados.
 - Control+Alt+Windows+V desde cualquier programa: buscar, elegir e Intro para **pegar donde estaba**; lo que tenía copiado vuelve al portapapeles al terminar.
 - Pegar como texto sin formato o transformado (una línea, mayúsculas, minúsculas...), favoritos, nombres, caducidad y límite.
-- Privacidad: respeta lo que los gestores de contraseñas marcan como privado y permite excluir programas.
+- Privacidad: respeta lo que los gestores de contraseñas marcan como privado, permite excluir programas y puede **cifrar el historial** con la protección de datos de Windows.
 
 **Emoticonos**
 
@@ -54,6 +54,7 @@ Centro de mando accesible para Windows: **escritorios virtuales**, **historial d
 - Volumen y silencio de la aplicación elegida con deslizador y casilla, balance izquierda y derecha, y dispositivo de comunicaciones aparte (salida y micrófono).
 - **Micrófonos**: elegir el predeterminado, volumen, silencio, **escuchar este dispositivo** por la salida que se elija, bloquear su volumen frente a otros programas y saber quién usa el micrófono o la cámara.
 - **Perfiles de audio** con nombre (salidas, micrófonos y volúmenes) que se aplican de una vez o con una tecla global.
+- Amplificación del micrófono, volumen máximo y ocultar por aplicación, mejoras de audio por salida y qué hace Windows con los demás sonidos durante las llamadas.
 - **Cambio automático al dispositivo preferido** al conectar o desconectar (por ejemplo, auriculares Bluetooth antes que altavoces) y silencio al bloquear el equipo sin silenciar nunca el lector.
 
 **Sistema**

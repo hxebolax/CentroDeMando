@@ -46,6 +46,22 @@ def audio_falso(monkeypatch):
 
 	monkeypatch.setattr(audio, "poner_escucha", escuchar)
 	estado["balance"] = 0
+	from app.services import topologia
+
+	class ControlFalso:
+		nivel = 0.0
+
+		def GetLevel(self, _canal):
+			return self.nivel
+
+		def SetLevelUniform(self, nivel, _contexto):
+			self.nivel = float(getattr(nivel, "value", nivel))
+
+	control = ControlFalso()
+	estado["amplificacion"] = control
+	monkeypatch.setattr(
+		topologia, "buscar_amplificaciones", lambda i: [topologia.Amplificacion("Amplificación de micrófono", 0.0, 30.0, 10.0, 0.0, control)]
+	)
 	monkeypatch.setattr(audio, "balance_general", lambda: estado["balance"])
 	monkeypatch.setattr(audio, "poner_balance_general", lambda b: estado.__setitem__("balance", b) or b)
 	return estado
@@ -107,6 +123,27 @@ def test_area_audio(controlador_falso, audio_falso, monkeypatch):
 		assert any("perfil" in e for e in limpias) and any("comunicaciones" in e for e in limpias)
 		letras = [e[e.index("&") + 1].lower() for e in etiquetas if "&" in e]
 		assert len(letras) == len(set(letras)), letras
+		assert all("&" in e for e in etiquetas), etiquetas
+		# Amplificación del micrófono: 0, +10, +20 y +30 dB.
+		area.refrescar()
+		assert area.amplificacion.IsEnabled() and area.amplificacion.GetCount() == 4
+		area.amplificacion.SetSelection(2)
+		area._al_amplificacion(wx.CommandEvent())
+		assert audio_falso["amplificacion"].nivel == 20.0
+		# Volumen máximo: el deslizador no pasa del límite.
+		controlador_falso.poner_limite_volumen("musica.exe", 30)
+		area.refrescar()
+		assert "máximo 30 %" in area.sesiones.texto_celda(0, 2)
+		area.volumen_app.SetValue(90)
+		area._al_mover_volumen_app(wx.CommandEvent())
+		assert audio_falso["sesiones"]["s1"][0] == 30
+		controlador_falso.poner_limite_volumen("musica.exe", None)
+		# Ocultar la aplicación y volver a verla.
+		area.sesiones.enfocar_fila(0, anunciar=False)
+		area.ocultar_aplicacion()
+		assert area.sesiones.numero_filas() == 0
+		area.alternar_ocultas()
+		assert area.sesiones.numero_filas() == 1
 	finally:
 		area._temporizador.Stop()
 		marco.Destroy()

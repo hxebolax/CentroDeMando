@@ -782,6 +782,145 @@ def _clave_escucha(PROPERTYKEY, GUID, pid: int):  # noqa: N803 - tipos de pycaw
 	return clave
 
 
+# Cuándo cambió Centro de Mando la escucha de cada micrófono: el aviso de
+# Windows de ese cambio no se anuncia (ya se dijo al hacerlo).
+_escucha_propia: dict[str, float] = {}
+
+
+def cambio_de_escucha_propio(identificador: str, segundos: float = 3.0) -> bool:
+	"""``True`` si Centro de Mando cambió la escucha de ese micrófono hace menos de ``segundos``."""
+	import time
+
+	return time.monotonic() - _escucha_propia.get(identificador, -1e9) < segundos
+
+
+def es_propiedad_escucha(fmtid: object, pid: int) -> bool:
+	"""La propiedad cambiada es la de «Escuchar este dispositivo» (función pura)."""
+	return str(fmtid).upper() == _FMTID_ESCUCHA and int(pid) in (_PID_ESCUCHA_DESTINO, _PID_ESCUCHA_ACTIVA)
+
+
+# ── Mejoras de audio (Configuración, Sistema, Sonido, el dispositivo, «Mejoras de audio») ──
+
+# PKEY_AudioEndpoint_Disable_SysFx, en el almacén de efectos (bFxStore = TRUE):
+# 0 = mejoras activadas, 1 = desactivadas. Comprobado sin administrador en 26300.
+_FMTID_ENDPOINT = "{1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E}"
+_PID_SIN_EFECTOS = 5
+
+
+def _clave_sin_efectos():
+	politica, ctypes, PROPERTYKEY, PROPVARIANT, GUID = _politica_clasica()  # noqa: N806
+	clave = PROPERTYKEY()
+	clave.fmtid = GUID(_FMTID_ENDPOINT)
+	clave.pid = _PID_SIN_EFECTOS
+	return politica, ctypes, clave, PROPVARIANT
+
+
+def leer_mejoras(identificador: str) -> bool | None:
+	"""``True`` si las mejoras de audio están activadas, ``False`` si no, ``None`` si el dispositivo no las tiene."""
+	from comtypes.automation import VT_UI4
+
+	try:
+		politica, ctypes, clave, PROPVARIANT = _clave_sin_efectos()  # noqa: N806
+		valor = PROPVARIANT()
+		politica.GetPropertyValue(identificador, True, ctypes.byref(clave), ctypes.byref(valor))
+	except Exception:  # noqa: BLE001
+		log.debug("No se pudieron leer las mejoras de %s", identificador, exc_info=True)
+		return None
+	if valor.vt != VT_UI4:
+		return None
+	return valor.union.lVal == 0
+
+
+def poner_mejoras(identificador: str, activar: bool) -> None:
+	from comtypes.automation import VT_UI4
+
+	if leer_mejoras(identificador) is None:
+		raise ErrorAudio("Este dispositivo no tiene mejoras de audio que activar o desactivar.")
+	try:
+		politica, ctypes, clave, PROPVARIANT = _clave_sin_efectos()  # noqa: N806
+		valor = PROPVARIANT()
+		valor.vt = VT_UI4
+		valor.union.lVal = 0 if activar else 1
+		politica.SetPropertyValue(identificador, True, ctypes.byref(clave), ctypes.byref(valor))
+	except Exception as error:  # noqa: BLE001
+		log.warning("No se pudieron cambiar las mejoras de audio", exc_info=True)
+		raise ErrorAudio("Windows no dejó cambiar las mejoras de audio.") from error
+	if leer_mejoras(identificador) != bool(activar):
+		raise ErrorAudio("Windows no aplicó el cambio de las mejoras de audio.")
+
+
+# ── Atenuación durante las llamadas (pestaña Comunicaciones del Panel de sonido) ──
+
+_CLAVE_AUDIO = r"Software\Microsoft\Multimedia\Audio"
+ATENUACION_SILENCIAR, ATENUACION_80, ATENUACION_50, ATENUACION_NADA = 0, 1, 2, 3
+
+
+def leer_atenuacion() -> int:
+	"""Qué hace Windows con los demás sonidos al detectar una llamada (0 a 3; de fábrica, 1 = bajarlos un 80 %)."""
+	try:
+		import winreg
+
+		with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _CLAVE_AUDIO) as clave:
+			valor, _tipo = winreg.QueryValueEx(clave, "UserDuckingPreference")
+	except (ImportError, OSError):
+		return ATENUACION_80
+	return valor if isinstance(valor, int) and 0 <= valor <= 3 else ATENUACION_80
+
+
+def poner_atenuacion(valor: int) -> None:
+	"""Lo mismo que elegir una opción en la pestaña Comunicaciones del Panel de sonido."""
+	import winreg
+
+	if valor not in (0, 1, 2, 3):
+		raise ErrorAudio("Opción de atenuación no válida.")
+	try:
+		with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _CLAVE_AUDIO) as clave:
+			winreg.SetValueEx(clave, "UserDuckingPreference", 0, winreg.REG_DWORD, int(valor))
+	except OSError as error:
+		raise ErrorAudio("No se pudo cambiar la atenuación de las llamadas.") from error
+
+
+# ── Aplicaciones ocultas y volumen máximo ───────────────────────────────────
+
+
+def nombre_programa(nombre: str) -> str:
+	"""«Chrome.EXE» → «chrome»: forma con la que se guardan ocultas y límites (función pura)."""
+	nombre = (nombre or "").strip().casefold()
+	return nombre[:-4] if nombre.endswith(".exe") else nombre
+
+
+def lista_programas(texto: str) -> set[str]:
+	"""«Chrome, spotify.exe» → {"chrome", "spotify"} (función pura)."""
+	return {nombre_programa(p) for p in str(texto or "").split(",") if p.strip()}
+
+
+def leer_limites(valor: object) -> dict[str, int]:
+	"""Límites guardados en la configuración, limpios (función pura)."""
+	if not isinstance(valor, dict):
+		return {}
+	return {
+		nombre_programa(k): int(v)
+		for k, v in valor.items()
+		if isinstance(k, str) and isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v < 100
+	}
+
+
+def aplicar_limites(limites: dict[str, int]) -> list[str]:
+	"""Baja al máximo permitido las aplicaciones que lo superan; devuelve sus nombres."""
+	if not limites:
+		return []
+	bajadas = []
+	for sesion in sesiones():
+		maximo = limites.get(nombre_programa(sesion.nombre))
+		if maximo is not None and sesion.volumen > maximo:
+			try:
+				poner_volumen_sesion(sesion.clave, maximo)
+				bajadas.append(sesion.nombre)
+			except ErrorAudio:
+				continue
+	return bajadas
+
+
 def leer_escucha(identificador: str) -> tuple[bool, str]:
 	"""(activada, id del dispositivo por el que se oye o "" = el predeterminado)."""
 	utilidades, _f, _r, _e = _pycaw()
@@ -826,6 +965,7 @@ def poner_escucha(identificador: str, activar: bool, destino: str | None = None)
 		if (getattr(error, "hresult", 0) & 0xFFFFFFFF) == 0x80070005:
 			raise ErrorAudio("Windows no dio permiso para cambiar «Escuchar este dispositivo».") from error
 		raise ErrorAudio("Windows no dejó cambiar «Escuchar este dispositivo».") from error
+	_escucha_propia[identificador] = __import__("time").monotonic()
 	# Se comprueba leyendo: algunas versiones aceptan la llamada sin aplicarla.
 	if leer_escucha(identificador)[0] != bool(activar):
 		raise ErrorAudio("Windows no aplicó «Escuchar este dispositivo».")
@@ -932,8 +1072,11 @@ class VigilanteDispositivos:
 	  desconecta y conecta sin que nadie haya tocado nada.
 	"""
 
-	def __init__(self, al_cambiar, con_pantallas=None, espera: float = 2.5, al_estabilizar=None) -> None:
+	def __init__(self, al_cambiar, con_pantallas=None, espera: float = 2.5, al_estabilizar=None, al_cambio_escucha=None) -> None:
 		import threading
+
+		# Se llama con el id del micrófono cuando alguien cambia «Escuchar este dispositivo».
+		self._al_cambio_escucha = al_cambio_escucha
 
 		self._al_cambiar = al_cambiar
 		# Se llama (desde el hilo del temporizador) cada vez que algo se conectó o
@@ -979,6 +1122,13 @@ class VigilanteDispositivos:
 
 			def on_device_removed(self, removed_device_id):
 				vigilante._estado(removed_device_id, 0)
+
+			def on_property_value_changed(self, device_id, property_struct, fmtid, pid):
+				if vigilante._al_cambio_escucha is not None and es_propiedad_escucha(fmtid, pid):
+					try:
+						vigilante._al_cambio_escucha(device_id)
+					except Exception:  # noqa: BLE001
+						log.debug("Error al avisar de un cambio de escucha", exc_info=True)
 
 		self._cliente = Cliente()
 		self._enumerador = utilidades.GetDeviceEnumerator()

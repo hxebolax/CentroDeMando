@@ -210,6 +210,13 @@ ACCIONES: list[Accion] = [
 		"Ctrl+Alt+Win+T",
 	),
 	Accion(
+		"portapapeles_favoritos",
+		"Favoritos del portapapeles",
+		"Abre el historial del portapapeles mostrando solo los favoritos; Intro pega el elegido donde estaba.",
+		CATEGORIA_PORTAPAPELES,
+		"",
+	),
+	Accion(
 		"pausar_portapapeles",
 		"Detener o reanudar la captura del portapapeles",
 		"Mientras está detenida, lo que se copia no se guarda en el historial.",

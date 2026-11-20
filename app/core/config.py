@@ -108,6 +108,8 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		# control_v | mayus_insert
 		"metodo_pegado": "control_v",
 		"anunciar_copias": False,
+		# Guardar el historial cifrado con la protección de datos de Windows (DPAPI).
+		"cifrar": False,
 	},
 	"emoticonos": {
 		# 0 = sin tono; 1-5 = de claro a oscuro.
@@ -183,6 +185,10 @@ VALORES_POR_DEFECTO: dict[str, Any] = {
 		"preferencias_salida": [],
 		"cambio_automatico_entrada": False,
 		"preferencias_entrada": [],
+		# Programas que no se ven en la lista del área de audio, separados por comas.
+		"apps_ocultas": "",
+		# {programa: volumen máximo}: si lo supera, se le baja.
+		"volumen_maximo": {},
 	},
 	"copias": {
 		# Copia de seguridad diaria en data/backups (configuración, fragmentos, historiales...).
